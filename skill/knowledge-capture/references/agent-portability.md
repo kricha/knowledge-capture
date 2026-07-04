@@ -4,7 +4,7 @@ This skill is portable because the runtime contract is small: write one Markdown
 
 ## Agent Adapters
 
-- Codex: install from the `skill/knowledge-capture` GitHub directory URL with `$skill-installer`, or place the folder at `.agents/skills/knowledge-capture` or `~/.agents/skills/knowledge-capture`; use `AGENTS.md` to request capture after meaningful work.
+- Codex: install from the `skill/knowledge-capture` GitHub directory URL with `$skill-installer`, or place the folder at `.agents/skills/knowledge-capture` or `~/.agents/skills/knowledge-capture`; use `AGENTS.md` to request capture after meaningful repo work and before the final response.
 - Claude Code: add the skill to the repo and point `CLAUDE.md` at `skill/knowledge-capture/SKILL.md`.
 - Cursor: add a `.cursor/rules/*.mdc` rule that says to write a raw capture after meaningful repo work or explicit save requests.
 - Windsurf: add the same instruction to `.windsurfrules`.

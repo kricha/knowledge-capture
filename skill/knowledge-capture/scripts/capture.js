@@ -297,8 +297,6 @@ function main(argv) {
       ok: true,
       path: outputPath,
       type: captureType,
-      capture_id: captureId,
-      sync_status: "local-only",
       warnings,
     }, null, 2));
     return 0;

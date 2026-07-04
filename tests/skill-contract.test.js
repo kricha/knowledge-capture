@@ -70,9 +70,10 @@ test("skill frontmatter is minimal and mentions optional Node helper", () => {
   const frontmatter = parseFrontmatter(SKILL_MD);
   assert.deepStrictEqual(Object.keys(frontmatter).sort(), ["description", "name"]);
   assert.strictEqual(frontmatter.name, "knowledge-capture");
-  assert.match(frontmatter.description, /raw repo-local knowledge/);
+  assert.match(frontmatter.description, /Must be used after any coding/);
   assert.match(frontmatter.description, /optional dependency-free Node helper/);
   assert.match(frontmatter.description, /\/capture commands/);
+  assert.match(frontmatter.description, /before the final response/);
   assert.match(frontmatter.description, /before context compression/);
 });
 
@@ -95,6 +96,8 @@ test("README makes agent prompt and skill-installer the primary install path", (
   assert.ok(readme.includes("https://github.com/kricha/knowledge-capture/tree/main/skill/knowledge-capture"));
   assert.ok(readme.includes("Install the knowledge-capture Agent Skill from"));
   assert.ok(readme.includes("$skill-installer install"));
+  assert.ok(readme.includes("Project instructions are loaded for normal coding tasks"));
+  assert.ok(readme.includes("After any coding task with changed files, run $knowledge-capture before the final response"));
   assert.ok(readme.includes(".agents/skills/knowledge-capture/SKILL.md"));
   assert.ok(readme.includes("~/.agents/skills/knowledge-capture/SKILL.md"));
   assert.ok(readme.includes("there is no custom package archive"));
@@ -227,7 +230,13 @@ test("scope excludes processing and sync", () => {
   assert.ok(skill.includes("Treat `/capture` as current-session capture"));
   assert.ok(skill.includes("`/capture <type>`"));
   assert.ok(skill.includes("Save one new Markdown file each time"));
+  assert.ok(skill.includes("## Automatic use"));
+  assert.ok(skill.includes("Before the final response for any repo task"));
+  assert.ok(skill.includes("save exactly one `session` capture"));
+  assert.ok(skill.includes("after verification and before asking for backlog cleanup or approval"));
   assert.ok(skill.includes("Before context compression, compaction, or handoff"));
+  assert.ok(skill.includes("After saving, report the path and type."));
+  assert.ok(!skill.includes("report the path, type, capture id, and sync status"));
   assert.ok(!skill.includes("references/privacy-policy.md"));
   assert.ok(!skill.includes("references/storage-policy.md"));
   assert.ok(!skill.includes("references/examples.md"));
@@ -259,6 +268,8 @@ test("optional Node helper creates valid capture", () => {
   assert.strictEqual(result.status, 0, result.stderr);
   const payload = JSON.parse(result.stdout);
   assert.strictEqual(payload.ok, true);
+  assert.ok(!Object.prototype.hasOwnProperty.call(payload, "capture_id"));
+  assert.ok(!Object.prototype.hasOwnProperty.call(payload, "sync_status"));
 
   const capturePath = payload.path;
   assert.ok(fs.existsSync(capturePath));

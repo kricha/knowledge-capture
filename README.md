@@ -72,7 +72,15 @@ Marketplace installation is not part of v0.1. For Codex, broader shared distribu
 
 ## Usage
 
-After meaningful work, the agent can use the optional Node helper:
+After meaningful repo work, the agent should capture before its final response. A meaningful work session includes changed files, important commands or tests, decisions, discoveries, or unresolved follow-ups.
+
+For maximum reliability, add this project instruction to the consuming repo. Project instructions are loaded for normal coding tasks, while skill bodies are loaded only after the skill triggers:
+
+```text
+After any coding task with changed files, run $knowledge-capture before the final response. Capture what changed, what was learned, what was decided, and what remains next.
+```
+
+The agent can use the optional Node helper:
 
 ```bash
 node .agents/skills/knowledge-capture/scripts/capture.js --type session --title "auth refresh token fix" --summary "Fixed expired refresh token behavior"

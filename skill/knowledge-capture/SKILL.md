@@ -1,9 +1,13 @@
 ---
 name: knowledge-capture
-description: Save raw repo-local knowledge captures as structured Markdown after coding work, debugging, investigation, architecture discussion, code review, handoff, before context compression when meaningful uncaptured work exists, /capture commands, or an explicit request to preserve what was done, learned, decided, or left next. Use only for local raw capture with an optional dependency-free Node helper or direct Markdown fallback; do not sync, process old captures, build memory stores, or promote durable memory.
+description: Must be used after any coding, debugging, investigation, architecture discussion, code review, or handoff before the final response when files changed, tests ran, decisions were made, or meaningful repo-local context should persist. Also use before context compression/handoff and on /capture commands. Saves one local-only raw Markdown capture under .ai/raw/ with an optional dependency-free Node helper or direct Markdown fallback; do not sync, process old captures, build memory stores, or promote durable memory.
 ---
 
 # Knowledge Capture
+
+## Automatic use
+
+Before the final response for any repo task, if files changed, tests ran, or a decision/discovery/follow-up was made, save exactly one `session` capture. Do this after verification and before asking for backlog cleanup or approval.
 
 Capture enough current-task detail for later processing. Save one new Markdown file each time; do not read, update, deduplicate, merge, sync, commit, publish, or promote previous captures in v0.1.
 
@@ -35,7 +39,7 @@ Use `--stdin` for extra context. If Node or shell execution is unavailable, writ
 - Raw/local-only state comes from the `.ai/raw/` path and skill policy, not per-capture workflow fields.
 - Treat the Node helper as optional. Direct file creation is still valid.
 
-After saving, report the path, type, capture id, and sync status. If the helper blocks capture, report the warning and do not save the raw content.
+After saving, report the path and type. If the helper blocks capture, report the warning and do not save the raw content.
 
 ## References
 
