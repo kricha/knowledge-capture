@@ -1,0 +1,4 @@
+interface:
+  display_name: "Knowledge Capture"
+  short_description: "Save local raw repo notes"
+  default_prompt: "Use $knowledge-capture to save a raw local capture of what we did, learned, decided, and left next."
