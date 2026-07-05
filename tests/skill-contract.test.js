@@ -70,6 +70,7 @@ test("skill package has one optional dependency-free Node helper", () => {
   assert.ok(!fs.existsSync(path.join(SKILL_ROOT, "assets")));
   assert.ok(!fs.existsSync(path.join(SKILL_ROOT, "package.json")));
   assert.ok(!fs.existsSync(path.join(SKILL_ROOT, "agent-package.json")));
+  assert.ok(!fs.existsSync(path.join(SKILL_ROOT, "CHANGELOG.md")));
   assert.ok(fs.statSync(path.join(SKILL_ROOT, "agents", "openai.yaml")).isFile());
   assert.ok(fs.statSync(REFERENCES).isDirectory());
   assert.deepStrictEqual(fs.readdirSync(REFERENCES).sort(), [
@@ -83,7 +84,7 @@ test("skill frontmatter is minimal and mentions optional Node helper", () => {
   assert.deepStrictEqual(Object.keys(frontmatter).sort(), ["description", "name"]);
   assert.strictEqual(frontmatter.name, "knowledge-capture");
   assert.match(frontmatter.description, /Must be used after any coding/);
-  assert.match(frontmatter.description, /one local-only raw Markdown capture per active session\/workflow/);
+  assert.match(frontmatter.description, /one local-only raw Markdown capture per current agent session/);
   assert.match(frontmatter.description, /optional dependency-free Node helper/);
   assert.match(frontmatter.description, /\/capture commands/);
   assert.match(frontmatter.description, /before the final response/);
@@ -106,9 +107,11 @@ test("skill package has no Python or package-install dependency", () => {
 
 test("README makes agent prompt and skill-installer the primary install path", () => {
   const readme = read(path.join(PROJECT_ROOT, "README.md"));
+  assert.ok(readme.includes("## v0.4 Contract"));
+  assert.ok(readme.includes("CHANGELOG.md"));
   assert.ok(readme.includes("https://github.com/kricha/knowledge-capture/tree/main/skill/knowledge-capture"));
-  assert.ok(readme.includes("future humans or agents using the same working copy"));
-  assert.ok(readme.includes("one active Markdown capture per session/workflow"));
+  assert.ok(readme.includes("future humans or agents in the same working copy"));
+  assert.ok(readme.includes("one active Markdown capture per current agent session"));
   assert.ok(readme.includes(".ai/raw/active-session.json"));
   assert.ok(readme.includes("Put `.ai/raw/` in `.gitignore` by default"));
   assert.ok(readme.includes("rare command output that changes the outcome"));
@@ -120,24 +123,29 @@ test("README makes agent prompt and skill-installer the primary install path", (
   assert.ok(readme.includes("Install the knowledge-capture Agent Skill from"));
   assert.ok(readme.includes("$skill-installer install"));
   assert.ok(readme.includes("Project instructions are loaded for normal coding tasks"));
-  assert.ok(readme.includes("Create or update the active session/workflow capture"));
+  assert.ok(readme.includes("Create or update the current agent-session capture"));
   assert.ok(readme.includes("pass sectioned details through `--stdin`"));
   assert.ok(readme.includes("A title plus `--summary` is intentionally too sparse"));
   assert.ok(readme.includes("Use `--update <path>` when the active capture path is known"));
-  assert.ok(readme.includes("Use `--update-active` when only `.ai/raw/active-session.json` is known"));
-  assert.ok(readme.includes("Do not append only the latest delta"));
+  assert.ok(readme.includes("Use `--update-active` only when `.ai/raw/active-session.json` belongs to the current session"));
+  assert.ok(readme.includes("do not append only the latest delta"));
   assert.ok(readme.includes("optional best-effort metadata"));
   assert.ok(readme.includes("Do not guess from latest filenames"));
-  assert.ok(readme.includes("Superseded decisions are kept only when they explain implemented code"));
+  assert.ok(readme.includes("Do not update a previous agent session's capture"));
+  assert.ok(readme.includes("Within the same agent session, continuation requires a reference to the active capture's decision, evidence, or outcome"));
+  assert.ok(readme.includes("not just the same module, repo, or file path"));
+  assert.ok(readme.includes("A later agent session may cite the old capture, but should start a new capture file"));
+  assert.ok(readme.includes("Keep superseded decisions only when they explain implemented code"));
   assert.ok(readme.includes("list changed project files and concise evidence"));
-  assert.ok(readme.includes("Omit routine `rg`, `git diff`, `git status`, test, build, and format commands"));
+  assert.ok(readme.includes("omit routine `rg`, `git diff`, `git status`, test, build, and format commands"));
   assert.ok(readme.includes("flat scalar YAML subset"));
+  assert.ok(readme.includes("with any consistent positive indentation"));
   assert.ok(readme.includes("lists, objects, block scalars, anchors, or deeper nesting"));
   assert.ok(readme.includes(".agents/skills/knowledge-capture/SKILL.md"));
   assert.ok(readme.includes("~/.agents/skills/knowledge-capture/SKILL.md"));
   assert.ok(readme.includes("custom package archive"));
   assert.ok(readme.includes("download-script installer"));
-  assert.ok(readme.includes("Codex-native install and upgrade path"));
+  assert.ok(readme.includes("package this later as a plugin"));
   assert.ok(readme.includes("node scripts/install.js --scope repo"));
   assert.ok(readme.includes("node scripts/install.js --scope user"));
   assert.ok(!readme.includes(".agent-skill.tgz"));
@@ -150,6 +158,16 @@ test("README makes agent prompt and skill-installer the primary install path", (
   assert.ok(!/\bwget\s+/.test(readme));
   assert.ok(!/\bcp\s+-/.test(readme));
   assert.ok(!/\bmv\s+/.test(readme));
+});
+
+test("root changelog records skill progress outside installed package", () => {
+  const changelog = read(path.join(PROJECT_ROOT, "CHANGELOG.md"));
+  assert.ok(changelog.includes("## v0.4 - 2026-07-05"));
+  assert.ok(changelog.includes("one capture per current agent session"));
+  assert.ok(changelog.includes("Guarded `--update-active`"));
+  assert.ok(changelog.includes("schema version `0.4`"));
+  assert.ok(changelog.includes("## v0.3 - 2026-07-05"));
+  assert.ok(!fs.existsSync(path.join(SKILL_ROOT, "CHANGELOG.md")));
 });
 
 test("raw captures are gitignored local working state", () => {
@@ -270,7 +288,7 @@ test("schema contains required fields and sections", () => {
     assert.ok(schema.includes(section), section);
   }
 
-  assert.ok(schema.includes("raw captures should be gitignored by default"));
+  assert.ok(schema.includes("gitignored by default"));
   assert.ok(schema.includes(".ai/raw/active-session.json.lock"));
   assert.ok(schema.includes("exclusive file creation"));
   assert.ok(schema.includes("removes stale locks"));
@@ -280,6 +298,7 @@ test("schema contains required fields and sections", () => {
   assert.ok(schema.includes("changed project files grouped by purpose plus concise evidence"));
   assert.ok(schema.includes("omit routine `rg`, `git diff`, `git status`, test, build, and format commands"));
   assert.ok(schema.includes("flat scalar subset only"));
+  assert.ok(schema.includes("with any consistent positive indentation"));
   assert.ok(schema.includes("lists, objects, block scalars, anchors, and deeper nesting are unsupported"));
 
   for (const oldSection of [
@@ -301,9 +320,9 @@ test("schema contains required fields and sections", () => {
 
 test("scope excludes processing and sync", () => {
   const skill = read(SKILL_MD);
-  assert.ok(skill.includes("create or update exactly one active `session` capture"));
-  assert.ok(skill.includes("If the active path is known in current context, update that path"));
-  assert.ok(skill.includes("read `.ai/raw/active-session.json` as a candidate pointer"));
+  assert.ok(skill.includes("save exactly one current-session `session` capture"));
+  assert.ok(skill.includes("Update the known active path only when it belongs to this current agent session"));
+  assert.ok(skill.includes("treat `.ai/raw/active-session.json` as a candidate pointer"));
   assert.ok(skill.includes("read, update, deduplicate, merge, sync, commit, publish, or promote unrelated captures"));
   assert.ok(skill.includes("do not read, update, deduplicate, merge, sync, commit, publish, or promote unrelated captures"));
   assert.ok(skill.includes("Raw/local-only state comes from the `.ai/raw/` path"));
@@ -315,7 +334,7 @@ test("scope excludes processing and sync", () => {
   assert.ok(!skill.includes("diffs, tests, command results"));
   assert.ok(skill.includes("Treat `/capture` as create/update current-session capture"));
   assert.ok(skill.includes("`/capture <type>`"));
-  assert.ok(skill.includes("Capture the final/current decision and evidence"));
+  assert.ok(skill.includes("final/current decision and evidence"));
   assert.ok(skill.includes("superseded decisions only when they explain implemented code"));
   assert.ok(skill.includes("write the whole capture as it should stand after the current workflow step"));
   assert.ok(skill.includes("Do not append a delta-only note"));
@@ -323,7 +342,7 @@ test("scope excludes processing and sync", () => {
   assert.ok(skill.includes("avoid boilerplate repo summaries"));
   assert.ok(skill.includes("## Automatic Use"));
   assert.ok(skill.includes("Before the final response for any repo task"));
-  assert.ok(skill.includes("create or update exactly one active `session` capture"));
+  assert.ok(skill.includes("save exactly one current-session `session` capture"));
   assert.ok(skill.includes("after verification and before asking for backlog cleanup or approval"));
   assert.ok(skill.includes("blocks title/summary-only captures by default"));
   assert.ok(skill.includes("`--update-active`"));
@@ -334,6 +353,10 @@ test("scope excludes processing and sync", () => {
   assert.ok(skill.includes("stale-lock cleanup"));
   assert.ok(skill.includes("atomic pointer replacement"));
   assert.ok(skill.includes("flat scalar YAML subset"));
+  assert.ok(skill.includes("Do not update a previous agent session's capture"));
+  assert.ok(skill.includes("Within one agent session, continuation requires a reference to the active capture's decision, evidence, or outcome"));
+  assert.ok(skill.includes("not just the same module, repo, or file path"));
+  assert.ok(skill.includes("A later agent session may cite the old capture, but should start a new capture file"));
   assert.ok(skill.includes("lists, objects, block scalars, anchors, or deeply nested YAML"));
   assert.ok(skill.includes("Never choose by latest filename guessing"));
   assert.ok(skill.includes("Before context compression, compaction, or handoff"));
@@ -356,6 +379,7 @@ test("active session example models current decisions", () => {
   assert.ok(example.includes("Added invoice tests for timeout retry and hard-decline failure."));
   assert.ok(example.includes("The earlier `pending_review` idea was not implemented"));
   assert.ok(example.includes("superseded decision"));
+  assert.ok(example.includes("A later agent session should create a new capture"));
   assert.ok(!example.includes("Ran `npm test"));
   assert.ok(!example.includes("## Context"));
   assert.ok(!example.includes("## Candidate future memory"));
@@ -422,7 +446,7 @@ test("optional Node helper creates valid capture", () => {
   );
 
   const text = read(capturePath);
-  assert.ok(text.includes('schema_version: "0.3"'));
+  assert.ok(text.includes('schema_version: "0.4"'));
   assert.ok(text.includes("created_at:"));
   assert.ok(text.includes("updated_at:"));
   assert.ok(!text.includes("status: raw"));
@@ -450,7 +474,7 @@ test("optional Node helper creates valid capture", () => {
   assert.ok(!text.includes("## Sensitive information check"));
 
   const pointer = readJson(payload.active_pointer);
-  assert.strictEqual(pointer.schema_version, "0.3");
+  assert.strictEqual(pointer.schema_version, "0.4");
   assert.strictEqual(pointer.type, "session");
   assertPointerTargets(repo, pointer, capturePath);
   assert.match(pointer.workflow_id, /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z--session--auth-refresh-token-fix$/);
@@ -468,7 +492,7 @@ test("optional Node helper cleans stale active pointer lock", () => {
   fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
   fs.mkdirSync(rawDir, { recursive: true });
   fs.writeFileSync(lockPath, JSON.stringify({
-    schema_version: "0.3",
+    schema_version: "0.4",
     lock_id: "stale",
     pid: 1,
     created_at: "2000-01-01T00:00:00Z",
@@ -500,7 +524,7 @@ test("optional Node helper cleans stale active pointer lock", () => {
   assert.strictEqual(payload.ok, true);
   assert.ok(fs.existsSync(payload.path));
   assert.ok(fs.existsSync(payload.active_pointer));
-  assert.strictEqual(readJson(payload.active_pointer).schema_version, "0.3");
+  assert.strictEqual(readJson(payload.active_pointer).schema_version, "0.4");
   assert.ok(!fs.existsSync(lockPath));
 });
 
@@ -605,7 +629,7 @@ test("optional Node helper updates active capture in place", () => {
   assert.strictEqual(pointer.title, "Retry Decision");
 });
 
-test("optional Node helper updates active pointer capture", () => {
+test("optional Node helper updates active pointer capture for matching session", () => {
   const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-"));
   const repo = path.join(tempdir, "my-repo");
   fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
@@ -646,7 +670,7 @@ test("optional Node helper updates active pointer capture", () => {
     "Pointer Resume",
     "--update-active",
     "--agent-session-id",
-    "session-b",
+    "session-a",
     "--stdin",
   ], {
     cwd: repo,
@@ -659,7 +683,7 @@ test("optional Node helper updates active pointer capture", () => {
       "Pointer selected the previous capture path.",
       "",
       "## Decisions and discoveries",
-      "A different agent session can continue a clear workflow.",
+      "The same agent session can continue a clear workflow.",
     ].join("\n"),
   });
 
@@ -676,8 +700,117 @@ test("optional Node helper updates active pointer capture", () => {
 
   pointer = readJson(pointerPath);
   assertPointerTargets(repo, pointer, capturePath);
-  assert.strictEqual(pointer.agent_session_id, "session-b");
+  assert.strictEqual(pointer.agent_session_id, "session-a");
   assert.strictEqual(pointer.title, "Pointer Resume");
+});
+
+test("optional Node helper rejects active pointer update for different session", () => {
+  const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-"));
+  const repo = path.join(tempdir, "my-repo");
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+
+  const first = spawnSync(process.execPath, [
+    CAPTURE_JS,
+    "--type",
+    "session",
+    "--title",
+    "Pointer Session Guard",
+    "--agent-session-id",
+    "session-a",
+    "--stdin",
+  ], {
+    cwd: repo,
+    encoding: "utf8",
+    input: [
+      "## User request",
+      "Start pointer-backed capture.",
+      "",
+      "## Changes and evidence",
+      "Initial capture created.",
+    ].join("\n"),
+  });
+
+  assert.strictEqual(first.status, 0, first.stderr);
+  const firstPayload = JSON.parse(first.stdout);
+  const pointerPath = firstPayload.active_pointer;
+  const capturePath = firstPayload.path;
+
+  const second = spawnSync(process.execPath, [
+    CAPTURE_JS,
+    "--type",
+    "session",
+    "--title",
+    "Pointer Session Guard",
+    "--update-active",
+    "--agent-session-id",
+    "session-b",
+    "--stdin",
+  ], {
+    cwd: repo,
+    encoding: "utf8",
+    input: [
+      "## Changes and evidence",
+      "This should not rewrite another session's capture.",
+    ].join("\n"),
+  });
+
+  assert.notStrictEqual(second.status, 0);
+  const payload = JSON.parse(second.stdout);
+  assert.strictEqual(payload.ok, false);
+  assert.match(payload.error, /different agent session/);
+  assert.ok(!read(capturePath).includes("This should not rewrite another session's capture."));
+  assert.strictEqual(readJson(pointerPath).agent_session_id, "session-a");
+});
+
+test("optional Node helper rejects active pointer update without session proof", () => {
+  const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-"));
+  const repo = path.join(tempdir, "my-repo");
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+
+  const first = spawnSync(process.execPath, [
+    CAPTURE_JS,
+    "--type",
+    "session",
+    "--title",
+    "Pointer Session Proof",
+    "--stdin",
+  ], {
+    cwd: repo,
+    encoding: "utf8",
+    input: [
+      "## User request",
+      "Start pointer-backed capture without session metadata.",
+      "",
+      "## Changes and evidence",
+      "Initial capture created.",
+    ].join("\n"),
+  });
+
+  assert.strictEqual(first.status, 0, first.stderr);
+  const capturePath = JSON.parse(first.stdout).path;
+
+  const second = spawnSync(process.execPath, [
+    CAPTURE_JS,
+    "--type",
+    "session",
+    "--title",
+    "Pointer Session Proof",
+    "--update-active",
+    "--stdin",
+  ], {
+    cwd: repo,
+    encoding: "utf8",
+    input: [
+      "## Changes and evidence",
+      "This should not rewrite an unverifiable active pointer.",
+    ].join("\n"),
+  });
+
+  assert.notStrictEqual(second.status, 0);
+  const payload = JSON.parse(second.stdout);
+  assert.strictEqual(payload.ok, false);
+  assert.match(payload.error, /session cannot be verified/);
+  assert.ok(!read(capturePath).includes("This should not rewrite an unverifiable active pointer."));
 });
 
 test("optional Node helper blocks sparse summary-only capture", () => {
@@ -787,6 +920,50 @@ test("optional Node helper blocks additional token families", () => {
     );
     assert.ok(!fs.existsSync(path.join(repo, ".ai")), expectedRisk);
   }
+});
+
+test("optional Node helper accepts consistent section config indentation", () => {
+  const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-config-"));
+  const repo = path.join(tempdir, "my-repo");
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+  fs.mkdirSync(path.join(repo, ".ai"), { recursive: true });
+  fs.writeFileSync(path.join(repo, ".ai", "config.yaml"), [
+    "capture:",
+    "    output_root: .ai/captures",
+    "    default_status: raw",
+    "",
+  ].join("\n"), "utf8");
+
+  const result = spawnSync(process.execPath, [
+    CAPTURE_JS,
+    "--type",
+    "session",
+    "--title",
+    "Indented Config",
+    "--stdin",
+  ], {
+    cwd: repo,
+    encoding: "utf8",
+    input: [
+      "## User request",
+      "Exercise four-space config parsing.",
+      "",
+      "## Changes and evidence",
+      "A capture should be written under the configured root.",
+    ].join("\n"),
+  });
+
+  assert.strictEqual(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.strictEqual(payload.ok, true);
+  assert.strictEqual(
+    fs.realpathSync(path.dirname(payload.path)),
+    fs.realpathSync(path.join(repo, ".ai", "captures", "sessions")),
+  );
+  assert.strictEqual(
+    fs.realpathSync(payload.active_pointer),
+    fs.realpathSync(path.join(repo, ".ai", "captures", "active-session.json")),
+  );
 });
 
 test("optional Node helper rejects unsupported config YAML", () => {

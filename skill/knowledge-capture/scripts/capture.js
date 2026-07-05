@@ -4,7 +4,7 @@
 const fs = require("fs");
 const path = require("path");
 
-const SCHEMA_VERSION = "0.3";
+const SCHEMA_VERSION = "0.4";
 const ACTIVE_POINTER_FILE = "active-session.json";
 const ACTIVE_POINTER_LOCK_FILE = `${ACTIVE_POINTER_FILE}.lock`;
 const ACTIVE_POINTER_LOCK_TIMEOUT_MS = 5000;
@@ -55,7 +55,7 @@ function usage() {
     "  --repo-root PATH    Repo root or path inside the repo",
     "  --output-root PATH  Output root, default .ai/raw",
     "  --update PATH      Replace the active capture at PATH",
-    "  --update-active    Replace capture from .ai/raw/active-session.json",
+    "  --update-active    Replace capture from .ai/raw/active-session.json when agent-session-id matches",
     "  --agent-session-id TEXT  Optional current agent/session id",
     "  --workflow-id TEXT  Optional stable workflow id",
     "  --stdin            Read sectioned capture details from stdin",
@@ -127,7 +127,7 @@ function parseScalar(value) {
   return trimmed;
 }
 
-function rejectUnsupportedConfigYaml(configPath, rawLine, value, indent, section) {
+function rejectUnsupportedConfigYaml(configPath, rawLine, value, indent, section, sectionIndent) {
   const stripped = rawLine.trim();
   const trimmedValue = value.trim();
   const message = `unsupported YAML in ${configPath}; use flat scalar keys or one-level scalar sections only`;
@@ -138,7 +138,10 @@ function rejectUnsupportedConfigYaml(configPath, rawLine, value, indent, section
   if (stripped.startsWith("- ")) {
     throw new Error(message);
   }
-  if (indent > 2 || (indent > 0 && !section)) {
+  if (indent > 0 && !section) {
+    throw new Error(message);
+  }
+  if (indent > 0 && sectionIndent > 0 && indent !== sectionIndent) {
     throw new Error(message);
   }
   if (indent > 0 && trimmedValue === "") {
@@ -157,6 +160,7 @@ function readSimpleConfig(configPath) {
 
   const lines = fs.readFileSync(configPath, "utf8").split(/\r?\n/);
   let section = "";
+  let sectionIndent = 0;
 
   for (const rawLine of lines) {
     const line = rawLine.replace(/\s+$/, "");
@@ -165,25 +169,30 @@ function readSimpleConfig(configPath) {
       continue;
     }
     if (!stripped.includes(":")) {
-      rejectUnsupportedConfigYaml(configPath, rawLine, "", line.length - line.trimStart().length, section);
+      rejectUnsupportedConfigYaml(configPath, rawLine, "", line.length - line.trimStart().length, section, sectionIndent);
     }
 
     const indent = line.length - line.trimStart().length;
     const splitAt = stripped.indexOf(":");
     const key = stripped.slice(0, splitAt).trim();
     const value = stripInlineComment(stripped.slice(splitAt + 1)).trim();
-    rejectUnsupportedConfigYaml(configPath, rawLine, value, indent, section);
+    rejectUnsupportedConfigYaml(configPath, rawLine, value, indent, section, sectionIndent);
 
     if (indent === 0 && value === "") {
       section = key;
+      sectionIndent = 0;
       continue;
     }
     if (indent === 0) {
       data[key] = parseScalar(value);
       section = "";
+      sectionIndent = 0;
       continue;
     }
     if (section) {
+      if (sectionIndent === 0) {
+        sectionIndent = indent;
+      }
       data[`${section}.${key}`] = parseScalar(value);
     }
   }
@@ -402,6 +411,15 @@ function resolveActivePointerPath(repoRoot, outputRoot) {
     throw new Error("active pointer must point to a file");
   }
   return { outputPath: resolved, pointer, pointerPath };
+}
+
+function assertActivePointerSessionMatches(pointer, agentSessionId) {
+  if (!agentSessionId || !pointer.agent_session_id) {
+    throw new Error("active pointer session cannot be verified; create a new capture instead of using --update-active");
+  }
+  if (pointer.agent_session_id !== agentSessionId) {
+    throw new Error("active pointer belongs to a different agent session; create a new capture instead of using --update-active");
+  }
 }
 
 function workflowIdFromPath(outputPath) {
@@ -626,6 +644,7 @@ function main(argv) {
 
     if (args.updateActive) {
       const active = resolveActivePointerPath(repoRoot, outputRoot);
+      assertActivePointerSessionMatches(active.pointer, args.agentSessionId || "");
       outputPath = active.outputPath;
       if (active.pointer.type && active.pointer.type !== captureType) {
         throw new Error(`active pointer type mismatch: existing '${active.pointer.type}', requested '${captureType}'`);

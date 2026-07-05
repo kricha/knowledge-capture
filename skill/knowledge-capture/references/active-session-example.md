@@ -1,10 +1,10 @@
 # Active Session Capture Example
 
-This example shows a capture after the same workflow was updated near the end of a session. It is not a transcript. It keeps current facts, evidence, and decisions.
+This example shows a capture after the same workflow was updated near the end of a session. It is not a transcript; it keeps current facts, evidence, and decisions.
 
 ```markdown
 ---
-schema_version: "0.3"
+schema_version: "0.4"
 type: session
 repo_id: "billing-service"
 repo_name: "Billing Service"
@@ -36,13 +36,13 @@ Implemented automatic retry for provider timeouts and kept hard declines as fail
 - Consider adding metrics for retry exhaustion in a later task.
 ```
 
-When updating, write the whole capture as it should stand after the current workflow step, using available task context and visible evidence. Do not append only the latest delta. If a superseded decision caused a code change, rollback, migration, or open risk, keep that fact. If it was only discussed and then replaced before implementation, leave it out or mention it briefly as context.
+When updating, rewrite the whole capture for the current workflow state; do not append only the latest delta. Keep superseded decisions only when they caused code, rollback, migration, open risk, or useful context.
 
 The active pointer for that workflow would look like:
 
 ```json
 {
-  "schema_version": "0.3",
+  "schema_version": "0.4",
   "type": "session",
   "active_capture": ".ai/raw/sessions/2026-07-04T18-22-10Z--session--invoice-retry-behavior.md",
   "workflow_id": "2026-07-04T18-22-10Z--session--invoice-retry-behavior",
@@ -53,4 +53,4 @@ The active pointer for that workflow would look like:
 }
 ```
 
-`agent_session_id` is optional best-effort metadata; omit it when the runtime does not clearly expose a stable current session, conversation, thread, or run ID. If a later agent session sees this pointer, it should update the capture only when the user request or handoff clearly continues invoice retry work. Otherwise it should create a new workflow capture and replace the pointer.
+`agent_session_id` is optional best-effort metadata; omit it when the runtime does not clearly expose a stable current session, conversation, thread, or run ID. A later agent session should create a new capture and replace the pointer; if it continues invoice retry work, cite this older capture instead of rewriting it.

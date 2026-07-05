@@ -1,0 +1,17 @@
+# Changelog
+
+## v0.4 - 2026-07-05
+
+- Clarified capture lifecycle: one capture per current agent session, scoped to its workflow.
+- Guarded `--update-active` so it only updates when `--agent-session-id` matches the active pointer.
+- Fixed `.ai/config.yaml` parsing so one-level scalar sections accept any consistent positive indentation.
+- Compacted repo and skill instructions while preserving active-pointer, local-only, safety, and parser rules.
+- Updated contract tests for session-boundary behavior, YAML indentation, compact wording, and schema version `0.4`.
+
+## v0.3 - 2026-07-05
+
+- Hardened raw capture behavior with lock-guarded active-pointer writes, stale-lock cleanup, and atomic pointer replacement.
+- Broadened obvious secret-risk detection.
+- Simplified raw capture sections to `User request`, `Outcome`, `Changes and evidence`, `Decisions and discoveries`, and `Open questions and next steps`.
+- Moved detailed runtime shape guidance into references and kept `SKILL.md` concise.
+- Documented local-first `.ai/raw/` posture and excluded sync, durable memory promotion, graph/vector databases, and Obsidian processing.

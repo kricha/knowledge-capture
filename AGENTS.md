@@ -8,12 +8,6 @@ Keep `SKILL.md` concise and put longer details in `skill/knowledge-capture/refer
 
 ## Maintenance Rules
 
-- Scripts must be deterministic and non-interactive.
-- Use no third-party dependencies for v0.3.
-- Make no network calls.
-- Add no sync behavior.
-- Add no graph or vector database.
-- Add no Obsidian processing.
-- Make no automatic git commits.
-- Do not promote durable memory yet.
+- Scripts must be deterministic, non-interactive, dependency-free for v0.4, and make no network calls.
+- Add no sync behavior, graph/vector database, Obsidian processing, durable memory promotion, or automatic git commits.
 - Keep raw captures local-first and repo-local.
