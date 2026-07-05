@@ -1,6 +1,6 @@
 ---
 name: knowledge-capture
-description: Must be used after any coding, debugging, investigation, architecture discussion, code review, or handoff before the final response when files changed, tests ran, decisions were made, or meaningful repo-local context should persist. Also use before context compression/handoff and on /capture commands. Maintains one local-only raw Markdown capture per current agent session, scoped to its workflow, under .ai/raw/ with an optional dependency-free Node helper or direct Markdown fallback; do not sync, process unrelated captures, build memory stores, or promote durable memory.
+description: Must be used after any coding, debugging, investigation, architecture discussion, code review, or handoff before the final response when files changed, tests ran, decisions were made, or meaningful local context should persist. Also use before context compression/handoff and on /capture commands. Maintains one local-only raw Markdown capture per current agent session, scoped to its workflow, under .ai/raw/ by default or a configured local output root, with an optional dependency-free Node helper or direct Markdown fallback; do not sync, process unrelated captures, build memory stores, or promote durable memory.
 ---
 
 # Knowledge Capture
@@ -9,14 +9,16 @@ description: Must be used after any coding, debugging, investigation, architectu
 
 Before the final response for any repo task, save exactly one current-session `session` capture when files changed, tests ran, or a decision, discovery, or follow-up emerged. Do this after verification and before asking for backlog cleanup or approval.
 
-Capture enough current-task detail for later use. In v0.4, do not read, update, deduplicate, merge, sync, commit, publish, or promote unrelated captures.
+Capture enough current-task detail for later use. In v0.5, do not read, update, deduplicate, merge, sync, commit, publish, or promote unrelated captures.
+
+Default output root is `.ai/raw/`. A repo may set `capture.output_root` in `.ai/config.yaml`, or pass `--output-root`, to use another local repo-relative, absolute, or `~/...` path such as a vault inbox. This relocates raw captures and the active pointer only; it is not sync, publishing, or durable memory promotion. Captures include `agent`, `changed_by`, and `changed_by_source`; helper metadata prefers configured values, then local git user config for `changed_by`, then whoami.
 
 Treat `/capture` as create/update current-session capture. Treat `/capture <type>` as that capture type when `<type>` is `session`, `discussion`, `investigation`, `decision`, or `handoff`. Before context compression, compaction, or handoff, capture first if meaningful work or decisions are not already captured.
 
 ## Active Selection
 
 1. Update the known active path only when it belongs to this current agent session and the request continues that captured workflow.
-2. Otherwise treat `.ai/raw/active-session.json` as a candidate pointer, not proof.
+2. Otherwise treat the output root's `active-session.json` as a candidate pointer, not proof; default path is `.ai/raw/active-session.json`.
 3. Update the pointer only when both pointer and runtime expose the same `agent_session_id` and the request continues that workflow.
 4. If the ID differs, is missing, or is unavailable, create a new capture and replace the pointer. Do not update a previous agent session's capture.
 5. Never choose by latest filename guessing.
@@ -33,22 +35,27 @@ If Node is available, use the dependency-free helper to create a capture, replac
 node .agents/skills/knowledge-capture/scripts/capture.js --type session --title "auth refresh token fix" --summary "Fixed expired refresh token behavior" --stdin
 node .agents/skills/knowledge-capture/scripts/capture.js --type session --title "auth refresh token fix" --update .ai/raw/sessions/2026-07-04T18-22-10Z--session--auth-refresh-token-fix.md --stdin
 node .agents/skills/knowledge-capture/scripts/capture.js --type session --title "auth refresh token fix" --update-active --agent-session-id "$CURRENT_AGENT_SESSION_ID" --stdin
+node .agents/skills/knowledge-capture/scripts/capture.js --type session --title "auth refresh token fix" --agent Codex --output-root "~/vault/agent-inbox" --stdin
 ```
 
-If Node or shell execution is unavailable, write Markdown directly from `references/raw-capture-schema.md`.
+If Node or shell execution is unavailable, write Markdown directly from `references/raw-capture-schema.md`. Read `.ai/config.yaml` when accessible; if `capture.output_root` is set, write under that local root, otherwise write under `.ai/raw/`. Use the type folder (`sessions/`, `handoffs/`, `decisions/`, etc.) and maintain `active-session.json` in the same root only when the active-session rules can be satisfied.
 
 ## Guardrails
 
 - Do not leave `Not captured.` in sections whose facts are known, especially `User request`, `Changes and evidence`, `Decisions and discoveries`, and `Open questions and next steps`.
+- Capture durable context, not proof of diligence: what changed, why it changed, what was learned, what remains, and what future work must preserve.
 - Keep the capture aligned to current reality: final/current decision and evidence. Keep superseded decisions only when they explain implemented code, a rollback, an unresolved risk, or an open question.
 - Capture useful raw detail, but avoid boilerplate repo summaries, transcripts, large logs, whole files, routine commands, and unrelated personal memory.
 - Put changed project files and concise evidence under `Changes and evidence`. Include commands only when rare, non-obvious, or decision-changing; omit routine `rg`, `git diff`, `git status`, test, build, and format commands.
+- Before saving, do a quality-filter pass: merge routine verification into one sentence, delete receipt-like lines, and keep exact commands only when needed to reproduce an unusual result.
+- Do not add extra top-level sections for command logs or verification; summarize verification under `Changes and evidence`.
 - Exclude secrets, credentials, API keys, private keys, customer private data, and sensitive logs. If sensitive content is present, summarize abstractly first.
 - Use `--agent-session-id` only when the runtime clearly exposes a stable current session, conversation, thread, or run ID. If not available, omit it. Never invent one.
-- Treat `.ai/raw/` as repo-relative local working state that should be gitignored by default. Do not commit raw captures unless the user explicitly asks after review and sanitization.
-- Treat helper-managed `.ai/raw/active-session.json` access as lock-guarded by `.ai/raw/active-session.json.lock`, stale-lock cleanup, and atomic pointer replacement; direct manual edits bypass this.
+- Treat `.ai/raw/` as the repo-relative default output root that should be gitignored by default. If `capture.output_root` points elsewhere, keep it local and review that location's privacy/backup behavior.
+- Treat helper-managed `active-session.json` access in the output root as lock-guarded by `active-session.json.lock`, stale-lock cleanup, and atomic pointer replacement; direct manual edits bypass this.
 - Treat helper config/frontmatter parsing as a flat scalar YAML subset. Do not rely on lists, objects, block scalars, anchors, or deeply nested YAML in `.ai/config.yaml` or capture frontmatter.
-- Raw/local-only state comes from the `.ai/raw/` path and skill policy, not per-capture workflow fields. Direct file creation remains valid.
+- Raw/local-only state comes from the configured output root and skill policy, not per-capture workflow fields. Direct file creation remains valid.
+- Treat installed skill files as vendored tool code. If repo lint/typecheck/format checks include `.agents/skills/knowledge-capture`, configure that path as a Node/CommonJS helper or exclude it from application-source checks.
 
 After saving, report the path, type, and whether it was created or updated. If the helper blocks capture, report the warning and do not save the raw content.
 

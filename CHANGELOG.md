@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.5 - 2026-07-05
+
+- Added configurable local output roots for vault/inbox placement via `capture.output_root` or `--output-root`.
+- Added stricter capture-quality guidance to keep durable context and drop receipt-like command noise.
+- Added capture identity metadata: `agent`, `changed_by`, and `changed_by_source`.
+- Bumped raw capture schema version to `0.5`.
+
 ## v0.4 - 2026-07-05
 
 - Clarified capture lifecycle: one capture per current agent session, scoped to its workflow.

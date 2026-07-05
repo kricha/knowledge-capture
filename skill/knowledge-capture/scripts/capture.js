@@ -1,10 +1,12 @@
 #!/usr/bin/env node
+/* global require, process, console, Atomics, SharedArrayBuffer */
 "use strict";
 
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 
-const SCHEMA_VERSION = "0.4";
+const SCHEMA_VERSION = "0.5";
 const ACTIVE_POINTER_FILE = "active-session.json";
 const ACTIVE_POINTER_LOCK_FILE = `${ACTIVE_POINTER_FILE}.lock`;
 const ACTIVE_POINTER_LOCK_TIMEOUT_MS = 5000;
@@ -53,9 +55,11 @@ function usage() {
     "  --summary TEXT      Summary for the main capture section",
     "  --tags a,b          Comma-separated tags",
     "  --repo-root PATH    Repo root or path inside the repo",
-    "  --output-root PATH  Output root, default .ai/raw",
+    "  --output-root PATH  Local output root, default .ai/raw; supports absolute and ~/ paths",
     "  --update PATH      Replace the active capture at PATH",
-    "  --update-active    Replace capture from .ai/raw/active-session.json when agent-session-id matches",
+    "  --update-active    Replace capture from the output root active-session.json when agent-session-id matches",
+    "  --agent TEXT       Agent name for capture metadata",
+    "  --changed-by TEXT  Person/account changing the repo; defaults to git user or whoami",
     "  --agent-session-id TEXT  Optional current agent/session id",
     "  --workflow-id TEXT  Optional stable workflow id",
     "  --stdin            Read sectioned capture details from stdin",
@@ -71,6 +75,8 @@ function parseArgs(argv) {
     repoRoot: "",
     outputRoot: "",
     update: "",
+    agent: "",
+    changedBy: "",
     agentSessionId: "",
     workflowId: "",
     stdin: false,
@@ -218,6 +224,154 @@ function findRepoRoot(start) {
   }
 }
 
+function safeReadFile(filePath) {
+  try {
+    return fs.readFileSync(filePath, "utf8");
+  } catch {
+    return "";
+  }
+}
+
+function expandHomePath(rawPath) {
+  const value = String(rawPath || "").trim();
+  if (value === "~") {
+    const home = process.env.HOME || process.env.USERPROFILE;
+    if (!home) {
+      throw new Error("cannot expand ~ because no home directory environment variable is set");
+    }
+    return home;
+  }
+  if (value.startsWith("~/") || value.startsWith("~\\")) {
+    const home = process.env.HOME || process.env.USERPROFILE;
+    if (!home) {
+      throw new Error("cannot expand ~ because no home directory environment variable is set");
+    }
+    return path.join(home, value.slice(2));
+  }
+  return value;
+}
+
+function homeDir() {
+  return process.env.HOME || process.env.USERPROFILE || "";
+}
+
+function resolveConfiguredPath(repoRoot, rawPath) {
+  const expanded = expandHomePath(rawPath);
+  return path.resolve(path.isAbsolute(expanded) ? expanded : path.join(repoRoot, expanded));
+}
+
+function gitDirPath(repoRoot) {
+  const dotGit = path.join(repoRoot, ".git");
+  if (!fs.existsSync(dotGit)) {
+    return "";
+  }
+  if (fs.statSync(dotGit).isDirectory()) {
+    return dotGit;
+  }
+
+  const gitFile = safeReadFile(dotGit).trim();
+  const match = gitFile.match(/^gitdir:\s*(.+)$/i);
+  if (!match) {
+    return "";
+  }
+  const gitDir = match[1].trim();
+  return path.resolve(path.isAbsolute(gitDir) ? gitDir : path.join(repoRoot, gitDir));
+}
+
+function gitConfigPaths(repoRoot) {
+  const paths = [];
+  const gitDir = gitDirPath(repoRoot);
+  if (gitDir) {
+    paths.push(path.join(gitDir, "config"));
+  }
+
+  const home = homeDir();
+  if (home) {
+    paths.push(path.join(home, ".gitconfig"));
+    paths.push(path.join(home, ".config", "git", "config"));
+  }
+
+  return paths;
+}
+
+function readGitConfigUser(configPath) {
+  const text = safeReadFile(configPath);
+  if (!text) {
+    return {};
+  }
+
+  const values = {};
+  let section = "";
+  for (const rawLine of text.split(/\r?\n/)) {
+    const line = rawLine.trim();
+    if (!line || line.startsWith("#") || line.startsWith(";")) {
+      continue;
+    }
+    const sectionMatch = line.match(/^\[([^\]]+)\]$/);
+    if (sectionMatch) {
+      section = sectionMatch[1].trim().split(/\s+/)[0].toLowerCase();
+      continue;
+    }
+    if (section !== "user" || !line.includes("=")) {
+      continue;
+    }
+
+    const splitAt = line.indexOf("=");
+    const key = line.slice(0, splitAt).trim().toLowerCase();
+    const value = parseScalar(line.slice(splitAt + 1).trim());
+    if ((key === "name" || key === "email") && value) {
+      values[key] = value;
+    }
+  }
+  return values;
+}
+
+function resolveGitChangedBy(repoRoot) {
+  for (const configPath of gitConfigPaths(repoRoot)) {
+    const user = readGitConfigUser(configPath);
+    if (user.name) {
+      return { changedBy: user.name, source: "git:user.name" };
+    }
+    if (user.email) {
+      return { changedBy: user.email, source: "git:user.email" };
+    }
+  }
+  return { changedBy: "", source: "" };
+}
+
+function resolveWhoami() {
+  try {
+    const user = os.userInfo();
+    if (user && user.username) {
+      return user.username;
+    }
+  } catch {
+    // Fall through to environment variables below.
+  }
+  return process.env.USER || process.env.USERNAME || "unknown";
+}
+
+function resolveCaptureIdentity(args, config, repoRoot) {
+  const agent = String(
+    args.agent ||
+      config["capture.agent"] ||
+      process.env.KNOWLEDGE_CAPTURE_AGENT ||
+      process.env.AGENT_NAME ||
+      "unknown",
+  ).trim() || "unknown";
+  const configuredChangedBy = String(args.changedBy || config["capture.changed_by"] || "").trim();
+  if (configuredChangedBy) {
+    return { agent, changedBy: configuredChangedBy, changedBySource: args.changedBy ? "cli" : "config" };
+  }
+
+  const gitIdentity = resolveGitChangedBy(repoRoot);
+  if (gitIdentity.changedBy) {
+    return { agent, changedBy: gitIdentity.changedBy, changedBySource: gitIdentity.source };
+  }
+
+  return { agent, changedBy: resolveWhoami(), changedBySource: "whoami" };
+}
+
 function slugify(title) {
   const slug = title.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-+|-+$/g, "").replace(/-+/g, "-");
   return (slug || "untitled").slice(0, 80);
@@ -270,7 +424,7 @@ function isPathInside(parent, child) {
 }
 
 function resolveUpdatePath(repoRoot, outputRoot, updatePath) {
-  const resolved = path.resolve(repoRoot, updatePath);
+  const resolved = resolveStoredCapturePath(repoRoot, updatePath);
   if (!isPathInside(outputRoot, resolved)) {
     throw new Error("--update path must be inside the output root");
   }
@@ -377,6 +531,18 @@ function toRepoRelativePath(repoRoot, targetPath) {
   return path.relative(repoRoot, targetPath).split(path.sep).join("/");
 }
 
+function toStoredCapturePath(repoRoot, targetPath) {
+  if (isPathInside(repoRoot, targetPath)) {
+    return toRepoRelativePath(repoRoot, targetPath);
+  }
+  return targetPath;
+}
+
+function resolveStoredCapturePath(repoRoot, storedPath) {
+  const expanded = expandHomePath(storedPath);
+  return path.resolve(path.isAbsolute(expanded) ? expanded : path.join(repoRoot, expanded));
+}
+
 function readJsonFile(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
@@ -400,7 +566,7 @@ function readActivePointer(outputRoot) {
 
 function resolveActivePointerPath(repoRoot, outputRoot) {
   const { pointer, pointerPath } = readActivePointer(outputRoot);
-  const resolved = path.resolve(repoRoot, pointer.active_capture);
+  const resolved = resolveStoredCapturePath(repoRoot, pointer.active_capture);
   if (!isPathInside(outputRoot, resolved)) {
     throw new Error("active pointer points outside the output root");
   }
@@ -431,11 +597,14 @@ function writeActivePointer(values) {
   const pointer = {
     schema_version: SCHEMA_VERSION,
     type: values.captureType,
-    active_capture: toRepoRelativePath(values.repoRoot, values.outputPath),
+    active_capture: toStoredCapturePath(values.repoRoot, values.outputPath),
     workflow_id: values.workflowId,
     title: values.title,
     created_at: values.createdAt,
     updated_at: values.updatedAt,
+    agent: values.agent,
+    changed_by: values.changedBy,
+    changed_by_source: values.changedBySource,
   };
 
   if (values.agentSessionId) {
@@ -544,6 +713,9 @@ function buildMarkdown(values) {
     `repo_name: ${yamlQuote(values.repoName)}`,
     `created_at: ${yamlQuote(values.createdAt)}`,
     `updated_at: ${yamlQuote(values.updatedAt)}`,
+    `agent: ${yamlQuote(values.agent)}`,
+    `changed_by: ${yamlQuote(values.changedBy)}`,
+    `changed_by_source: ${yamlQuote(values.changedBySource)}`,
     `tags: ${yamlList(values.tags)}`,
     "---",
     "",
@@ -572,12 +744,13 @@ function main(argv) {
       return 0;
     }
 
-    const repoRoot = findRepoRoot(args.repoRoot || process.cwd());
+    const repoRoot = findRepoRoot(args.repoRoot ? expandHomePath(args.repoRoot) : process.cwd());
     const config = readSimpleConfig(path.join(repoRoot, ".ai", "config.yaml"));
     const repoId = String(config.repo_id || path.basename(repoRoot));
     const repoName = String(config.repo_name || titleizeRepoName(repoId));
+    const identity = resolveCaptureIdentity(args, config, repoRoot);
     const outputRootValue = args.outputRoot || config["capture.output_root"] || ".ai/raw";
-    const outputRoot = path.resolve(path.isAbsolute(outputRootValue) ? outputRootValue : path.join(repoRoot, outputRootValue));
+    const outputRoot = resolveConfiguredPath(repoRoot, outputRootValue);
 
     if (config["capture.default_status"] && config["capture.default_status"] !== "raw") {
       warnings.push(`Configured capture.default_status ignored; v${SCHEMA_VERSION} writes raw captures only.`);
@@ -612,7 +785,14 @@ function main(argv) {
     let createdAt = iso;
     let workflowId = args.workflowId || "";
 
-    const secretRisks = detectSecretRisks([title, args.summary || "", args.tags || "", stdinBody].join("\n"));
+    const secretRisks = detectSecretRisks([
+      title,
+      args.summary || "",
+      args.tags || "",
+      stdinBody,
+      identity.agent,
+      identity.changedBy,
+    ].join("\n"));
     if (secretRisks.length) {
       warnings.push(`Potential sensitive details detected: ${secretRisks.join(", ")}`);
       throw new Error("capture blocked because potential sensitive details were detected");
@@ -625,6 +805,9 @@ function main(argv) {
       stdinBody,
       repoId,
       repoName,
+      agent: identity.agent,
+      changedBy: identity.changedBy,
+      changedBySource: identity.changedBySource,
       createdAt: iso,
       updatedAt: iso,
       tags: args.tags || "",
@@ -686,6 +869,9 @@ function main(argv) {
       stdinBody,
       repoId,
       repoName,
+      agent: identity.agent,
+      changedBy: identity.changedBy,
+      changedBySource: identity.changedBySource,
       createdAt,
       updatedAt: iso,
       tags: args.tags || "",
@@ -708,6 +894,9 @@ function main(argv) {
         title,
         createdAt,
         updatedAt: iso,
+        agent: identity.agent,
+        changedBy: identity.changedBy,
+        changedBySource: identity.changedBySource,
         dryRun: args.dryRun,
       });
     }

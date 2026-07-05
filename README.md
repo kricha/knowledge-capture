@@ -1,15 +1,16 @@
 # knowledge-capture
 
-`knowledge-capture` is a minimal Agent Skill for saving raw repo-local notes from coding, debugging, investigations, architecture decisions, reviews, and handoffs.
+`knowledge-capture` is a minimal Agent Skill for saving raw local notes from coding, debugging, investigations, architecture decisions, reviews, and handoffs.
 
-It writes one active Markdown capture per current agent session, scoped to its workflow, under `.ai/raw/` so future humans or agents in the same working copy can see what changed, what was learned, what was decided, and what remains.
+It writes one active Markdown capture per current agent session, scoped to its workflow, under `.ai/raw/` by default or a configured local output root such as a vault inbox, so future humans or agents can see what changed, what was learned, what was decided, and what remains.
 
-## v0.4 Contract
+## v0.5 Contract
 
 - Raw capture only: optional dependency-free Node helper plus direct Markdown fallback.
-- Local-first: `.ai/raw/` is repo-relative local working state, not shared project documentation. Put `.ai/raw/` in `.gitignore` by default.
-- Active pointer: `.ai/raw/active-session.json` tracks the current agent-session capture.
-- Concurrency: helper-managed `session` captures serialize active-pointer reads and writes with `.ai/raw/active-session.json.lock`, stale-lock cleanup, and atomic pointer replacement. This is not a distributed lock and does not protect direct manual edits or tools that bypass the helper.
+- Local-first default: `.ai/raw/` is repo-relative local working state, not shared project documentation. Put `.ai/raw/` in `.gitignore` by default.
+- Configurable local output: set `capture.output_root` in `.ai/config.yaml` or pass `--output-root` to use a repo-relative, absolute, or `~/...` local path.
+- Active pointer: `.ai/raw/active-session.json` tracks the current agent-session capture by default; configured output roots keep their own `active-session.json`.
+- Concurrency: helper-managed `session` captures serialize active-pointer reads and writes with `active-session.json.lock` in the output root, stale-lock cleanup, and atomic pointer replacement. This is not a distributed lock and does not protect direct manual edits or tools that bypass the helper.
 - Scope limits: no Python, package install, compiled binary, sync, graph/vector database, Obsidian processing, durable memory promotion, marketplace packaging, custom package archive, GitHub Release asset workflow, download-script installer, or automatic git commits.
 
 For team handoff, share intentionally reviewed and sanitized content through normal docs, issues, PRs, or an explicitly approved capture. Do not commit raw captures automatically.
@@ -68,7 +69,7 @@ node scripts/install.js --scope user
 
 Add `--dry-run` to preview writes. Add `--force` to replace an existing installed copy.
 
-Marketplace installation is out of v0.4 scope. For Codex, package this later as a plugin and expose it through a repo, personal, or workspace marketplace.
+Marketplace installation is out of v0.5 scope. For Codex, package this later as a plugin and expose it through a repo, personal, or workspace marketplace.
 
 ## Usage
 
@@ -88,20 +89,35 @@ The helper is only a deterministic writer. For useful captures, pass sectioned d
 node .agents/skills/knowledge-capture/scripts/capture.js --type session --title "auth refresh token fix" --summary "Fixed expired refresh token behavior" --stdin
 node .agents/skills/knowledge-capture/scripts/capture.js --type session --title "auth refresh token fix" --update .ai/raw/sessions/2026-07-04T18-22-10Z--session--auth-refresh-token-fix.md --stdin
 node .agents/skills/knowledge-capture/scripts/capture.js --type session --title "auth refresh token fix" --update-active --agent-session-id "$CURRENT_AGENT_SESSION_ID" --stdin
+node .agents/skills/knowledge-capture/scripts/capture.js --type session --title "auth refresh token fix" --agent Codex --output-root "~/vault/agent-inbox" --stdin
 ```
 
-Use `--update <path>` when the active capture path is known. Use `--update-active` only when `.ai/raw/active-session.json` belongs to the current session and can be verified with a matching `--agent-session-id`.
+Use `--update <path>` when the active capture path is known. Use `--update-active` only when `.ai/raw/active-session.json` belongs to the current session and can be verified with a matching `--agent-session-id` for the default root; for configured roots, apply the same rule to the output root's `active-session.json`.
 
-Without Node or shell execution, create or update one Markdown file directly:
+To configure a local vault or inbox, keep the config in the repo and point captures at the local output root:
+
+```yaml
+# .ai/config.yaml
+capture:
+  output_root: ~/vault/agent-inbox
+  agent: Codex
+  changed_by: Jane Developer
+```
+
+The configured root receives the `sessions/`, `handoffs/`, and other capture folders plus its own `active-session.json`. Captures include `agent`, `changed_by`, and `changed_by_source`; the helper prefers configured values, then local git user config for `changed_by`, then a whoami fallback. This is only local file placement; it does not sync, index, publish, or promote captures. If the path is inside a repo, gitignore it. If it is outside a repo, review that location's privacy, backup, and sharing behavior.
+
+Without Node or shell execution, create or update one Markdown file directly. Read `.ai/config.yaml` when accessible; if `capture.output_root` is set, write under that local root, otherwise write under `.ai/raw/`. Use the type folder for the capture type and maintain `active-session.json` in the same root only when the active-session rules can be satisfied.
 
 ```text
 .ai/raw/sessions/2026-07-04T18-22-10Z--session--auth-refresh-token-fix.md
 ```
 
+Installed skill files are vendored tool code. If repo lint/typecheck/format checks include `.agents/skills/knowledge-capture`, configure that path as Node/CommonJS helper code or exclude it from application-source checks. The helper is dependency-free and deterministic, but strict app lint rules such as `no-console`, `no-sync`, browser-only globals, or security rules for dynamic filesystem paths may not fit this CLI script.
+
 ## Active Capture Rules
 
 1. Update the known active path only when it belongs to the current agent session and the request continues that captured workflow.
-2. Otherwise treat `.ai/raw/active-session.json` as a candidate pointer, not proof.
+2. Otherwise treat `.ai/raw/active-session.json` as a candidate pointer, not proof. For configured output roots, treat that root's `active-session.json` the same way.
 3. Use the pointer only when both pointer and runtime expose the same session ID and the request continues that workflow.
 4. If the session ID differs, is missing, or is unavailable, create a new capture and replace the pointer. Do not update a previous agent session's capture.
 5. Do not guess from latest filenames.
@@ -112,7 +128,7 @@ When updating, rewrite the whole capture as the current workflow summary; do not
 
 `agent_session_id` is optional best-effort metadata. Use it only when the runtime clearly exposes a stable current session, conversation, thread, or run ID. If not available, omit it; never invent one. Use `--update-active` only when the active pointer's session can be verified as the current session; otherwise create a new capture.
 
-The helper intentionally reads only a flat scalar YAML subset from `.ai/config.yaml` and existing capture frontmatter. Config may use top-level scalar keys and one-level scalar sections such as `capture.output_root` with any consistent positive indentation, but not lists, objects, block scalars, anchors, or deeper nesting.
+The helper intentionally reads only a flat scalar YAML subset from `.ai/config.yaml` and existing capture frontmatter. Config may use top-level scalar keys and one-level scalar sections such as `capture.output_root` with any consistent positive indentation, but not lists, objects, block scalars, anchors, or deeper nesting. `capture.output_root` may be repo-relative, absolute, or `~/...`.
 
 See `skill/knowledge-capture/references/raw-capture-schema.md` for the capture shape.
 
