@@ -1,8 +1,18 @@
 # knowledge-capture
 
-`knowledge-capture` is a minimal Agent Skill for saving raw repo-local knowledge from coding work, debugging, investigations, repo discussions, architecture decisions, reviews, and handoffs.
+`knowledge-capture` is a minimal Agent Skill for saving raw repo-local knowledge from coding, debugging, investigations, architecture decisions, reviews, and handoffs.
 
-It writes one active Markdown capture per session/workflow under `.ai/raw/` so future humans or agents can see what happened, why it happened, what was learned, and what could happen next. A tiny `.ai/raw/active-session.json` pointer keeps active-session updates deterministic across resume, compaction, and handoff. v0.2 is raw capture only: an optional dependency-free Node helper plus direct Markdown fallback. There is no Python, package install, compiled binary, sync, graph or vector database, Obsidian processing, durable memory promotion, or automatic git commit behavior.
+It writes one active Markdown capture per session/workflow under `.ai/raw/` so future humans or agents using the same working copy can see what happened, why it happened, what was learned, and what could happen next.
+
+## v0.3 Contract
+
+- Raw capture only: optional dependency-free Node helper plus direct Markdown fallback.
+- Local-first: `.ai/raw/` is repo-relative local working state, not shared project documentation. Put `.ai/raw/` in `.gitignore` by default.
+- Active pointer: `.ai/raw/active-session.json` tracks the current workflow capture.
+- Concurrency: helper-managed `session` captures serialize active-pointer reads and writes with `.ai/raw/active-session.json.lock`, stale-lock cleanup, and atomic pointer replacement. This is not a distributed lock and does not protect direct manual edits or tools that bypass the helper.
+- Scope limits: no Python, package install, compiled binary, sync, graph/vector database, Obsidian processing, durable memory promotion, marketplace packaging, custom package archive, GitHub Release asset workflow, download-script installer, or automatic git commits.
+
+For team handoff, share intentionally reviewed and sanitized content through normal docs, issues, PRs, or an explicitly approved capture. Do not commit raw captures automatically.
 
 ## Project Structure
 
@@ -10,23 +20,20 @@ It writes one active Markdown capture per session/workflow under `.ai/raw/` so f
 knowledge-capture/
   AGENTS.md
   README.md
-  scripts/
-    install.js
-  skill/
-    knowledge-capture/
-      SKILL.md
-      agents/openai.yaml
-      references/
-        active-session-example.md
-        agent-portability.md
-        raw-capture-schema.md
-      scripts/capture.js
+  scripts/install.js
+  skill/knowledge-capture/
+    SKILL.md
+    agents/openai.yaml
+    references/
+      active-session-example.md
+      raw-capture-schema.md
+    scripts/capture.js
   tests/
 ```
 
 ## Install
 
-Install from the skill directory URL. Use the URL for `skill/knowledge-capture`, not the repository root:
+Install from the skill directory URL, not the repository root:
 
 ```text
 https://github.com/kricha/knowledge-capture/tree/main/skill/knowledge-capture
@@ -44,19 +51,12 @@ For Codex:
 $skill-installer install https://github.com/kricha/knowledge-capture/tree/main/skill/knowledge-capture
 ```
 
-The installed repo-local skill must end up at:
+Expected install paths:
 
 ```text
 .agents/skills/knowledge-capture/SKILL.md
-```
-
-For user-global install, target:
-
-```text
 ~/.agents/skills/knowledge-capture/SKILL.md
 ```
-
-v0.2 uses the standard skill-folder model directly; there is no custom package archive, release manifest, GitHub release asset workflow, download-script installer, or compiled binary.
 
 The dependency-free Node installer remains for development and testing from a checked-out source:
 
@@ -65,23 +65,23 @@ node scripts/install.js --scope repo --target /absolute/path/to/consuming-repo
 node scripts/install.js --scope user
 ```
 
-To preview without writing files, add `--dry-run`. To replace an existing installed copy, add `--force`.
+Add `--dry-run` to preview writes. Add `--force` to replace an existing installed copy.
 
-### Marketplace
-
-Marketplace installation is not part of v0.2. For Codex, broader shared distribution should come later by packaging this skill as a plugin and exposing that plugin through a repo, personal, or workspace marketplace. That is the Codex-native install and upgrade path for shared distribution.
+Marketplace installation is not part of v0.3. For Codex, broader shared distribution should come later by packaging this skill as a plugin and exposing that plugin through a repo, personal, or workspace marketplace. That is the Codex-native install and upgrade path for shared distribution.
 
 ## Usage
 
-After meaningful repo work, the agent should create or update the active workflow capture before its final response. A meaningful work session includes changed files, important commands or tests, decisions, discoveries, or unresolved follow-ups.
+After meaningful repo work, the agent should create or update the active workflow capture before its final response. Meaningful work includes changed files, decisions, discoveries, unresolved follow-ups, or rare command output that changes the outcome.
 
-For maximum reliability, add this project instruction to the consuming repo. Project instructions are loaded for normal coding tasks, while skill bodies are loaded only after the skill triggers:
+Recommended consuming-repo instruction:
 
 ```text
 After any coding task with changed files, run $knowledge-capture before the final response. Create or update the active session/workflow capture with what changed, what was learned, what was decided, and what remains next.
 ```
 
-The helper is only a deterministic writer. For meaningful work, the agent must pass sectioned details through `--stdin` or write the Markdown directly; a title plus `--summary` is intentionally too sparse. When the active capture path is already known, update that file with `--update`. When only the active pointer is known, update it with `--update-active`.
+Project instructions are loaded for normal coding tasks, while skill bodies are loaded only after the skill triggers.
+
+The helper is only a deterministic writer. For useful captures, pass sectioned details through `--stdin` or write Markdown directly. A title plus `--summary` is intentionally too sparse.
 
 ```bash
 node .agents/skills/knowledge-capture/scripts/capture.js --type session --title "auth refresh token fix" --summary "Fixed expired refresh token behavior" --stdin
@@ -89,33 +89,45 @@ node .agents/skills/knowledge-capture/scripts/capture.js --type session --title 
 node .agents/skills/knowledge-capture/scripts/capture.js --type session --title "auth refresh token fix" --update-active --stdin
 ```
 
-If Node or shell execution is unavailable, the agent creates one Markdown file directly under the correct raw-capture folder and updates that same file for the rest of the session/workflow:
+Use `--update <path>` when the active capture path is known. Use `--update-active` when only `.ai/raw/active-session.json` is known.
+
+If Node or shell execution is unavailable, create or update one Markdown file directly:
 
 ```text
 .ai/raw/sessions/2026-07-04T18-22-10Z--session--auth-refresh-token-fix.md
 ```
 
-The file uses YAML frontmatter plus the preferred sections from `skill/knowledge-capture/references/raw-capture-schema.md`. When updating an active capture, rewrite it as the complete current summary of the workflow from available task context, visible files, diffs, tests, command results, and handoff text. Do not append only the latest delta, and do not invent missing context. When a decision changes and the implementation changes with it, the capture should reflect the final/current decision. Superseded decisions are kept only when they explain implemented code, a rollback, an unresolved risk, or an open question.
-
-Active session capture selection is deterministic:
+## Active Capture Rules
 
 1. Update the known active path from current context.
 2. Otherwise read `.ai/raw/active-session.json` as a candidate pointer.
 3. If both the pointer and runtime expose a session ID and they match, use it.
-4. If the session ID differs, is missing, or is unavailable, use it only when the user request or handoff clearly resumes that workflow.
+4. If the session ID differs, is missing, or is unavailable, use the pointer only when the user request or handoff clearly resumes that workflow.
 5. Otherwise create a new capture and replace the pointer. Do not guess from latest filenames.
+
+When updating an active capture, rewrite the whole capture as the complete current workflow summary. Do not append only the latest delta. Use visible task context, changed files, decision-relevant evidence, and handoff text. In `Changes and evidence`, list changed project files and concise evidence; include commands only when rare, non-obvious, or decision-changing. Omit routine `rg`, `git diff`, `git status`, test, build, and format commands. Superseded decisions are kept only when they explain implemented code, a rollback, an unresolved risk, or an open question.
 
 `agent_session_id` is optional best-effort metadata. Use it only when the runtime clearly exposes a stable current session, conversation, thread, or run ID. If not available, omit it; never invent one.
 
+The helper intentionally reads only a flat scalar YAML subset from `.ai/config.yaml` and existing capture frontmatter. Config may use top-level scalar keys and one-level scalar sections such as `capture.output_root`, but not lists, objects, block scalars, anchors, or deeper nesting.
+
+See `skill/knowledge-capture/references/raw-capture-schema.md` for the capture shape.
+
 ## Agent Compatibility
 
-The skill is portable to agents that can follow project instructions and write files in the workspace. Agents without filesystem write access can draft capture content for a human to save.
+| Agent environment | Instruction surface | Notes |
+| --- | --- | --- |
+| Codex | `AGENTS.md`, `.agents/skills/knowledge-capture`, or `~/.agents/skills/knowledge-capture` | Install from the `skill/knowledge-capture` GitHub directory URL with `$skill-installer`; request capture after meaningful repo work and before the final response. |
+| Claude Code | `CLAUDE.md` | Add the skill to the repo and point project instructions at `skill/knowledge-capture/SKILL.md`. |
+| Cursor | `.cursor/rules/*.mdc` | Add a rule to write a raw capture after meaningful repo work or explicit save requests. |
+| Windsurf | `.windsurfrules` | Add the same instruction as Cursor. |
+| Gemini CLI | `GEMINI.md` | Add the same project instruction. |
+| Cline/Roo Code | project custom rules | Approve local file writes and shell execution when prompted. |
+| GitHub Copilot coding agent/chat | `.github/copilot-instructions.md` | Capture works only where workspace file writes are available. |
 
-See `skill/knowledge-capture/references/agent-portability.md` for adapters for Codex, Claude Code, Cursor, Windsurf, Gemini CLI, Cline/Roo Code, and GitHub Copilot-style environments.
+Agents without filesystem write access can only draft capture content for a human to save. Agents without Node or shell access can still write a valid capture directly from `raw-capture-schema.md` if they can edit files.
 
 ## Tests
-
-Run the built-in Node test suite from the project root:
 
 ```bash
 node --test tests/*.test.js

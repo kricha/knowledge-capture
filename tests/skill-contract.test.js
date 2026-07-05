@@ -74,7 +74,6 @@ test("skill package has one optional dependency-free Node helper", () => {
   assert.ok(fs.statSync(REFERENCES).isDirectory());
   assert.deepStrictEqual(fs.readdirSync(REFERENCES).sort(), [
     "active-session-example.md",
-    "agent-portability.md",
     "raw-capture-schema.md",
   ]);
 });
@@ -108,23 +107,35 @@ test("skill package has no Python or package-install dependency", () => {
 test("README makes agent prompt and skill-installer the primary install path", () => {
   const readme = read(path.join(PROJECT_ROOT, "README.md"));
   assert.ok(readme.includes("https://github.com/kricha/knowledge-capture/tree/main/skill/knowledge-capture"));
+  assert.ok(readme.includes("future humans or agents using the same working copy"));
   assert.ok(readme.includes("one active Markdown capture per session/workflow"));
   assert.ok(readme.includes(".ai/raw/active-session.json"));
+  assert.ok(readme.includes("Put `.ai/raw/` in `.gitignore` by default"));
+  assert.ok(readme.includes("rare command output that changes the outcome"));
+  assert.ok(readme.includes("not shared project documentation"));
+  assert.ok(readme.includes(".ai/raw/active-session.json.lock"));
+  assert.ok(readme.includes("stale-lock cleanup"));
+  assert.ok(readme.includes("atomic pointer replacement"));
+  assert.ok(readme.includes("not a distributed lock"));
   assert.ok(readme.includes("Install the knowledge-capture Agent Skill from"));
   assert.ok(readme.includes("$skill-installer install"));
   assert.ok(readme.includes("Project instructions are loaded for normal coding tasks"));
   assert.ok(readme.includes("Create or update the active session/workflow capture"));
   assert.ok(readme.includes("pass sectioned details through `--stdin`"));
-  assert.ok(readme.includes("a title plus `--summary` is intentionally too sparse"));
-  assert.ok(readme.includes("update that file with `--update`"));
-  assert.ok(readme.includes("update it with `--update-active`"));
+  assert.ok(readme.includes("A title plus `--summary` is intentionally too sparse"));
+  assert.ok(readme.includes("Use `--update <path>` when the active capture path is known"));
+  assert.ok(readme.includes("Use `--update-active` when only `.ai/raw/active-session.json` is known"));
   assert.ok(readme.includes("Do not append only the latest delta"));
   assert.ok(readme.includes("optional best-effort metadata"));
   assert.ok(readme.includes("Do not guess from latest filenames"));
   assert.ok(readme.includes("Superseded decisions are kept only when they explain implemented code"));
+  assert.ok(readme.includes("list changed project files and concise evidence"));
+  assert.ok(readme.includes("Omit routine `rg`, `git diff`, `git status`, test, build, and format commands"));
+  assert.ok(readme.includes("flat scalar YAML subset"));
+  assert.ok(readme.includes("lists, objects, block scalars, anchors, or deeper nesting"));
   assert.ok(readme.includes(".agents/skills/knowledge-capture/SKILL.md"));
   assert.ok(readme.includes("~/.agents/skills/knowledge-capture/SKILL.md"));
-  assert.ok(readme.includes("there is no custom package archive"));
+  assert.ok(readme.includes("custom package archive"));
   assert.ok(readme.includes("download-script installer"));
   assert.ok(readme.includes("Codex-native install and upgrade path"));
   assert.ok(readme.includes("node scripts/install.js --scope repo"));
@@ -141,10 +152,36 @@ test("README makes agent prompt and skill-installer the primary install path", (
   assert.ok(!/\bmv\s+/.test(readme));
 });
 
+test("raw captures are gitignored local working state", () => {
+  const gitignore = read(path.join(PROJECT_ROOT, ".gitignore"));
+  const readme = read(path.join(PROJECT_ROOT, "README.md"));
+
+  assert.match(gitignore, /^\.ai\/raw\/$/m);
+  assert.ok(readme.includes("repo-relative local working state"));
+  assert.ok(readme.includes("Put `.ai/raw/` in `.gitignore` by default"));
+  assert.ok(readme.includes(".ai/raw/active-session.json.lock"));
+  assert.ok(readme.includes("stale-lock cleanup"));
+  assert.ok(readme.includes("atomic pointer replacement"));
+  assert.ok(readme.includes("tools that bypass the helper"));
+});
+
 test("Node helper uses only built-in modules and no network APIs", () => {
   const script = read(CAPTURE_JS);
   assert.ok(script.includes('require("fs")'));
   assert.ok(script.includes('require("path")'));
+  assert.ok(script.includes("ACTIVE_POINTER_LOCK_FILE"));
+  assert.ok(script.includes("acquireActivePointerLock"));
+  assert.ok(script.includes("releaseActivePointerLock"));
+  assert.ok(script.includes("writeFileAtomic"));
+  for (const patternName of [
+    "anthropic-api-key",
+    "cloudflare-token",
+    "n8n-api-key",
+    "hmac-secret",
+    "env-secret-assignment",
+  ]) {
+    assert.ok(script.includes(patternName), patternName);
+  }
   assert.ok(!/require\(["'](?!fs["']|path["'])/.test(script));
   assert.ok(!script.includes("fetch("));
   assert.ok(!script.includes("http.request"));
@@ -225,21 +262,33 @@ test("schema contains required fields and sections", () => {
 
   for (const section of [
     "## User request",
-    "## Context",
     "## Outcome",
     "## Changes and evidence",
     "## Decisions and discoveries",
     "## Open questions and next steps",
-    "## Candidate future memory",
   ]) {
     assert.ok(schema.includes(section), section);
   }
+
+  assert.ok(schema.includes("raw captures should be gitignored by default"));
+  assert.ok(schema.includes(".ai/raw/active-session.json.lock"));
+  assert.ok(schema.includes("exclusive file creation"));
+  assert.ok(schema.includes("removes stale locks"));
+  assert.ok(schema.includes("atomically renames it into place"));
+  assert.ok(schema.includes("not a distributed lock"));
+  assert.ok(schema.includes("AWS, GitHub, OpenAI, Anthropic, Cloudflare, n8n"));
+  assert.ok(schema.includes("changed project files grouped by purpose plus concise evidence"));
+  assert.ok(schema.includes("omit routine `rg`, `git diff`, `git status`, test, build, and format commands"));
+  assert.ok(schema.includes("flat scalar subset only"));
+  assert.ok(schema.includes("lists, objects, block scalars, anchors, and deeper nesting are unsupported"));
 
   for (const oldSection of [
     "## What was done or discussed",
     "## Why it was done or discussed",
     "## Files changed",
     "## Commands run",
+    "## Context",
+    "## Candidate future memory",
     "## Important discoveries",
     "## Decisions made",
     "## Problems encountered",
@@ -253,32 +302,39 @@ test("schema contains required fields and sections", () => {
 test("scope excludes processing and sync", () => {
   const skill = read(SKILL_MD);
   assert.ok(skill.includes("create or update exactly one active `session` capture"));
-  assert.ok(skill.includes("Do not create a fresh capture just because the skill is invoked again"));
-  assert.ok(skill.includes("`.ai/raw/active-session.json` as a candidate active pointer"));
-  assert.ok(skill.includes("Read/update only the active capture for the current workflow"));
-  assert.ok(skill.includes("Do not clear it after every final response"));
-  assert.ok(skill.includes("Replace it when a new workflow capture starts"));
+  assert.ok(skill.includes("If the active path is known in current context, update that path"));
+  assert.ok(skill.includes("read `.ai/raw/active-session.json` as a candidate pointer"));
+  assert.ok(skill.includes("read, update, deduplicate, merge, sync, commit, publish, or promote unrelated captures"));
   assert.ok(skill.includes("do not read, update, deduplicate, merge, sync, commit, publish, or promote unrelated captures"));
   assert.ok(skill.includes("Raw/local-only state comes from the `.ai/raw/` path"));
-  assert.ok(skill.includes("Direct file creation is still valid"));
+  assert.ok(skill.includes("Direct file creation remains valid"));
   assert.ok(skill.includes("Changes and evidence"));
-  assert.ok(skill.includes("rare, non-obvious, or decision-relevant commands"));
+  assert.ok(skill.includes("changed project files, concise evidence, and handoff text"));
+  assert.ok(skill.includes("changed project files and concise evidence"));
+  assert.ok(skill.includes("omit routine `rg`, `git diff`, `git status`, test, build, and format commands"));
+  assert.ok(!skill.includes("diffs, tests, command results"));
   assert.ok(skill.includes("Treat `/capture` as create/update current-session capture"));
   assert.ok(skill.includes("`/capture <type>`"));
-  assert.ok(skill.includes("capture the final/current decision and evidence"));
-  assert.ok(skill.includes("purely theoretical abandoned options"));
+  assert.ok(skill.includes("Capture the final/current decision and evidence"));
+  assert.ok(skill.includes("superseded decisions only when they explain implemented code"));
   assert.ok(skill.includes("write the whole capture as it should stand after the current workflow step"));
   assert.ok(skill.includes("Do not append a delta-only note"));
-  assert.ok(skill.includes("A capture is not complete just because the helper wrote a file"));
   assert.ok(skill.includes("Do not leave `Not captured.` in sections whose facts are known"));
-  assert.ok(skill.includes("## Automatic use"));
+  assert.ok(skill.includes("avoid boilerplate repo summaries"));
+  assert.ok(skill.includes("## Automatic Use"));
   assert.ok(skill.includes("Before the final response for any repo task"));
   assert.ok(skill.includes("create or update exactly one active `session` capture"));
   assert.ok(skill.includes("after verification and before asking for backlog cleanup or approval"));
   assert.ok(skill.includes("blocks title/summary-only captures by default"));
   assert.ok(skill.includes("`--update-active`"));
-  assert.ok(skill.includes("`agent_session_id` as a useful guardrail"));
+  assert.ok(skill.includes("Use `--agent-session-id` only when the runtime clearly exposes"));
   assert.ok(skill.includes("If not available, omit it. Never invent one."));
+  assert.ok(skill.includes("should be gitignored by default"));
+  assert.ok(skill.includes(".ai/raw/active-session.json.lock"));
+  assert.ok(skill.includes("stale-lock cleanup"));
+  assert.ok(skill.includes("atomic pointer replacement"));
+  assert.ok(skill.includes("flat scalar YAML subset"));
+  assert.ok(skill.includes("lists, objects, block scalars, anchors, or deeply nested YAML"));
   assert.ok(skill.includes("Never choose by latest filename guessing"));
   assert.ok(skill.includes("Before context compression, compaction, or handoff"));
   assert.ok(skill.includes("After saving, report the path, type, and whether it was created or updated."));
@@ -297,8 +353,12 @@ test("active session example models current decisions", () => {
   assert.ok(example.includes("active_capture"));
   assert.ok(example.includes("agent_session_id"));
   assert.ok(example.includes("Final decision: provider timeouts stay retryable"));
+  assert.ok(example.includes("Added invoice tests for timeout retry and hard-decline failure."));
   assert.ok(example.includes("The earlier `pending_review` idea was not implemented"));
   assert.ok(example.includes("superseded decision"));
+  assert.ok(!example.includes("Ran `npm test"));
+  assert.ok(!example.includes("## Context"));
+  assert.ok(!example.includes("## Candidate future memory"));
 });
 
 test("OpenAI metadata points to skill", () => {
@@ -317,7 +377,7 @@ test("optional Node helper creates valid capture", () => {
     "",
     "## Changes and evidence",
     "- Updated auth refresh handling.",
-    "- Ran token expiry tests.",
+    "- Updated token expiry test coverage.",
     "",
     "## Decisions and discoveries",
     "Refresh failures should return a recoverable auth state.",
@@ -362,7 +422,7 @@ test("optional Node helper creates valid capture", () => {
   );
 
   const text = read(capturePath);
-  assert.ok(text.includes('schema_version: "0.2"'));
+  assert.ok(text.includes('schema_version: "0.3"'));
   assert.ok(text.includes("created_at:"));
   assert.ok(text.includes("updated_at:"));
   assert.ok(!text.includes("status: raw"));
@@ -372,9 +432,11 @@ test("optional Node helper creates valid capture", () => {
   assert.ok(text.includes("Fixed expired refresh token behavior"));
   assert.ok(text.includes("Fix expired refresh token behavior."));
   assert.ok(text.includes("Updated auth refresh handling."));
-  assert.ok(text.includes("Ran token expiry tests."));
+  assert.ok(text.includes("Updated token expiry test coverage."));
+  assert.ok(!text.includes("Ran token expiry tests."));
   assert.ok(text.includes("Refresh failures should return a recoverable auth state."));
   for (const section of [
+    "## User request",
     "## Outcome",
     "## Changes and evidence",
     "## Decisions and discoveries",
@@ -382,17 +444,64 @@ test("optional Node helper creates valid capture", () => {
   ]) {
     assert.ok(text.includes(section), section);
   }
+  assert.ok(!text.includes("## Context"));
+  assert.ok(!text.includes("## Candidate future memory"));
   assert.ok(!text.includes("## Commands run"));
   assert.ok(!text.includes("## Sensitive information check"));
 
   const pointer = readJson(payload.active_pointer);
-  assert.strictEqual(pointer.schema_version, "0.2");
+  assert.strictEqual(pointer.schema_version, "0.3");
   assert.strictEqual(pointer.type, "session");
   assertPointerTargets(repo, pointer, capturePath);
   assert.match(pointer.workflow_id, /^\d{4}-\d{2}-\d{2}T\d{2}-\d{2}-\d{2}Z--session--auth-refresh-token-fix$/);
   assert.strictEqual(pointer.title, "Auth Refresh Token Fix");
   assert.ok(pointer.created_at);
   assert.ok(pointer.updated_at);
+  assert.ok(!fs.existsSync(path.join(repo, ".ai", "raw", "active-session.json.lock")));
+});
+
+test("optional Node helper cleans stale active pointer lock", () => {
+  const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-lock-"));
+  const repo = path.join(tempdir, "my-repo");
+  const rawDir = path.join(repo, ".ai", "raw");
+  const lockPath = path.join(rawDir, "active-session.json.lock");
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+  fs.mkdirSync(rawDir, { recursive: true });
+  fs.writeFileSync(lockPath, JSON.stringify({
+    schema_version: "0.3",
+    lock_id: "stale",
+    pid: 1,
+    created_at: "2000-01-01T00:00:00Z",
+  }), "utf8");
+  const oldTime = new Date(Date.now() - 180000);
+  fs.utimesSync(lockPath, oldTime, oldTime);
+
+  const result = spawnSync(process.execPath, [
+    CAPTURE_JS,
+    "--type",
+    "session",
+    "--title",
+    "Stale Lock Cleanup",
+    "--stdin",
+  ], {
+    cwd: repo,
+    encoding: "utf8",
+    input: [
+      "## User request",
+      "Exercise stale active pointer lock cleanup.",
+      "",
+      "## Changes and evidence",
+      "A stale lock should not block capture creation.",
+    ].join("\n"),
+  });
+
+  assert.strictEqual(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.strictEqual(payload.ok, true);
+  assert.ok(fs.existsSync(payload.path));
+  assert.ok(fs.existsSync(payload.active_pointer));
+  assert.strictEqual(readJson(payload.active_pointer).schema_version, "0.3");
+  assert.ok(!fs.existsSync(lockPath));
 });
 
 test("optional Node helper dry-run does not write", () => {
@@ -400,9 +509,6 @@ test("optional Node helper dry-run does not write", () => {
   const repo = path.join(tempdir, "my-repo");
   fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
   const stdin = [
-    "## Context",
-    "Dry-run capture context.",
-    "",
     "## Changes and evidence",
     "Dry-run only; no files should be written.",
   ].join("\n");
@@ -597,6 +703,34 @@ test("optional Node helper blocks sparse summary-only capture", () => {
   assert.ok(!fs.existsSync(path.join(repo, ".ai")));
 });
 
+test("optional Node helper does not count removed context section as meaningful", () => {
+  const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-"));
+  const repo = path.join(tempdir, "my-repo");
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+
+  const result = spawnSync(process.execPath, [
+    CAPTURE_JS,
+    "--type",
+    "session",
+    "--title",
+    "Context Only",
+    "--stdin",
+  ], {
+    cwd: repo,
+    encoding: "utf8",
+    input: [
+      "## Context",
+      "This repo is the knowledge-capture Agent Skill source.",
+    ].join("\n"),
+  });
+
+  assert.notStrictEqual(result.status, 0);
+  const payload = JSON.parse(result.stdout);
+  assert.strictEqual(payload.ok, false);
+  assert.match(payload.error, /too sparse/);
+  assert.ok(!fs.existsSync(path.join(repo, ".ai")));
+});
+
 test("optional Node helper blocks obvious sensitive details", () => {
   const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-"));
   const repo = path.join(tempdir, "my-repo");
@@ -618,4 +752,76 @@ test("optional Node helper blocks obvious sensitive details", () => {
   assert.match(payload.error, /capture blocked/);
   assert.ok(payload.warnings.some((warning) => warning.includes("Potential sensitive details")));
   assert.ok(!fs.existsSync(path.join(repo, ".ai")));
+});
+
+test("optional Node helper blocks additional token families", () => {
+  const cases = [
+    ["anthropic-api-key", "sk-ant-api03-abcdefghijklmnopqrstuvwxyz0123456789"],
+    ["cloudflare-token", "CF_API_TOKEN=abcdefghijklmnopqrstuvwxyz1234567890ABCD"],
+    ["n8n-api-key", "N8N_API_KEY=abcdefghijklmnopqrstuvwxyz123456"],
+    ["hmac-secret", "HMAC_SECRET=abcdefghijklmnopqrstuvwxyz123456"],
+  ];
+
+  for (const [expectedRisk, secretText] of cases) {
+    const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-secret-"));
+    const repo = path.join(tempdir, "my-repo");
+    fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+
+    const result = spawnSync(process.execPath, [
+      CAPTURE_JS,
+      "--type",
+      "session",
+      "--title",
+      `Secret Risk ${expectedRisk}`,
+      "--summary",
+      secretText,
+    ], { cwd: repo, encoding: "utf8" });
+
+    assert.notStrictEqual(result.status, 0, expectedRisk);
+    const payload = JSON.parse(result.stdout);
+    assert.strictEqual(payload.ok, false, expectedRisk);
+    assert.match(payload.error, /capture blocked/, expectedRisk);
+    assert.ok(
+      payload.warnings.some((warning) => warning.includes(expectedRisk)),
+      `${expectedRisk}: ${payload.warnings.join("\n")}`,
+    );
+    assert.ok(!fs.existsSync(path.join(repo, ".ai")), expectedRisk);
+  }
+});
+
+test("optional Node helper rejects unsupported config YAML", () => {
+  const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-config-"));
+  const repo = path.join(tempdir, "my-repo");
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+  fs.mkdirSync(path.join(repo, ".ai"), { recursive: true });
+  fs.writeFileSync(path.join(repo, ".ai", "config.yaml"), [
+    "capture:",
+    "  output_root: [\".ai/raw\"]",
+    "",
+  ].join("\n"), "utf8");
+
+  const result = spawnSync(process.execPath, [
+    CAPTURE_JS,
+    "--type",
+    "session",
+    "--title",
+    "Unsupported Config",
+    "--stdin",
+  ], {
+    cwd: repo,
+    encoding: "utf8",
+    input: [
+      "## User request",
+      "Exercise config parsing.",
+      "",
+      "## Changes and evidence",
+      "No capture should be written.",
+    ].join("\n"),
+  });
+
+  assert.notStrictEqual(result.status, 0);
+  const payload = JSON.parse(result.stdout);
+  assert.strictEqual(payload.ok, false);
+  assert.match(payload.error, /unsupported YAML/);
+  assert.ok(!fs.existsSync(path.join(repo, ".ai", "raw")));
 });

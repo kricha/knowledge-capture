@@ -4,7 +4,12 @@
 const fs = require("fs");
 const path = require("path");
 
+const SCHEMA_VERSION = "0.3";
 const ACTIVE_POINTER_FILE = "active-session.json";
+const ACTIVE_POINTER_LOCK_FILE = `${ACTIVE_POINTER_FILE}.lock`;
+const ACTIVE_POINTER_LOCK_TIMEOUT_MS = 5000;
+const ACTIVE_POINTER_LOCK_STALE_MS = 120000;
+const ACTIVE_POINTER_LOCK_POLL_MS = 25;
 
 const TYPE_FOLDERS = {
   session: "sessions",
@@ -16,23 +21,29 @@ const TYPE_FOLDERS = {
 
 const REQUIRED_SECTIONS = [
   "User request",
-  "Context",
   "Outcome",
   "Changes and evidence",
   "Decisions and discoveries",
   "Open questions and next steps",
-  "Candidate future memory",
 ];
 
 const SECRET_PATTERNS = [
   ["private-key", /-----BEGIN [A-Z ]*PRIVATE KEY-----/],
   ["aws-access-key", /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/],
   ["github-token", /\b(?:ghp|gho|ghu|ghs|ghr)_[A-Za-z0-9_]{20,}\b|\bgithub_pat_[A-Za-z0-9_]{20,}\b/],
-  ["openai-api-key", /\bsk-(?:proj-)?[A-Za-z0-9_-]{20,}\b/],
+  ["anthropic-api-key", /\bsk-ant-[A-Za-z0-9_-]{20,}\b/],
+  ["openai-api-key", /\bsk-(?!ant-)(?:proj-)?[A-Za-z0-9_-]{20,}\b/],
+  ["cloudflare-token", /\b(?:cloudflare|cf)[_-]?(?:api[_-]?)?(?:token|key|secret)\s*[:=]\s*['"]?[A-Za-z0-9._~+/=-]{12,}/i],
+  ["n8n-api-key", /\bn8n_api_[A-Za-z0-9_-]{20,}\b|\bn8n[_-]?(?:api[_-]?)?(?:key|token|secret)\s*[:=]\s*['"]?[A-Za-z0-9._~+/=-]{12,}/i],
+  ["hmac-secret", /\b(?:hmac|signing|webhook)[_-]?(?:secret|key|token)\s*[:=]\s*['"]?[A-Za-z0-9._~+/=-]{12,}/i],
+  ["env-secret-assignment", /\b[A-Z][A-Z0-9_]*(?:API_KEY|ACCESS_TOKEN|AUTH_TOKEN|TOKEN|SECRET|PRIVATE_KEY|WEBHOOK_SECRET|SIGNING_SECRET)\s*[:=]\s*['"]?[A-Za-z0-9._~+/=-]{12,}/],
   ["bearer-token", /\bbearer\s+[A-Za-z0-9._~+/=-]{12,}/i],
   ["password", /\b(?:password|passwd|pwd)\s*[:=]\s*['"]?[^'"\s]{6,}/i],
   ["token-assignment", /\b(?:api[_-]?key|access[_-]?token|secret|token)\s*[:=]\s*['"]?[A-Za-z0-9._~+/=-]{12,}/i],
 ];
+
+let activePointerLockCounter = 0;
+let atomicWriteCounter = 0;
 
 function usage() {
   return [
@@ -116,6 +127,28 @@ function parseScalar(value) {
   return trimmed;
 }
 
+function rejectUnsupportedConfigYaml(configPath, rawLine, value, indent, section) {
+  const stripped = rawLine.trim();
+  const trimmedValue = value.trim();
+  const message = `unsupported YAML in ${configPath}; use flat scalar keys or one-level scalar sections only`;
+
+  if (!stripped.includes(":")) {
+    throw new Error(message);
+  }
+  if (stripped.startsWith("- ")) {
+    throw new Error(message);
+  }
+  if (indent > 2 || (indent > 0 && !section)) {
+    throw new Error(message);
+  }
+  if (indent > 0 && trimmedValue === "") {
+    throw new Error(message);
+  }
+  if (trimmedValue === "|" || trimmedValue === ">" || trimmedValue.startsWith("[") || trimmedValue.startsWith("{")) {
+    throw new Error(message);
+  }
+}
+
 function readSimpleConfig(configPath) {
   const data = {};
   if (!fs.existsSync(configPath)) {
@@ -128,14 +161,18 @@ function readSimpleConfig(configPath) {
   for (const rawLine of lines) {
     const line = rawLine.replace(/\s+$/, "");
     const stripped = line.trim();
-    if (!stripped || stripped.startsWith("#") || !stripped.includes(":")) {
+    if (!stripped || stripped.startsWith("#")) {
       continue;
+    }
+    if (!stripped.includes(":")) {
+      rejectUnsupportedConfigYaml(configPath, rawLine, "", line.length - line.trimStart().length, section);
     }
 
     const indent = line.length - line.trimStart().length;
     const splitAt = stripped.indexOf(":");
     const key = stripped.slice(0, splitAt).trim();
     const value = stripInlineComment(stripped.slice(splitAt + 1)).trim();
+    rejectUnsupportedConfigYaml(configPath, rawLine, value, indent, section);
 
     if (indent === 0 && value === "") {
       section = key;
@@ -241,6 +278,92 @@ function activePointerPath(outputRoot) {
   return path.join(outputRoot, ACTIVE_POINTER_FILE);
 }
 
+function activePointerLockPath(outputRoot) {
+  return path.join(outputRoot, ACTIVE_POINTER_LOCK_FILE);
+}
+
+function sleepSync(milliseconds) {
+  Atomics.wait(new Int32Array(new SharedArrayBuffer(4)), 0, 0, milliseconds);
+}
+
+function removeStaleActivePointerLock(lockPath) {
+  let stats;
+  try {
+    stats = fs.statSync(lockPath);
+  } catch (error) {
+    if (error && error.code === "ENOENT") {
+      return false;
+    }
+    throw error;
+  }
+
+  if (Date.now() - stats.mtimeMs <= ACTIVE_POINTER_LOCK_STALE_MS) {
+    return false;
+  }
+
+  fs.rmSync(lockPath, { force: true });
+  return true;
+}
+
+function acquireActivePointerLock(outputRoot) {
+  fs.mkdirSync(outputRoot, { recursive: true });
+
+  const lockPath = activePointerLockPath(outputRoot);
+  const startedAt = Date.now();
+  const lockId = `${process.pid}-${startedAt}-${activePointerLockCounter += 1}`;
+  const payload = {
+    schema_version: SCHEMA_VERSION,
+    lock_id: lockId,
+    pid: process.pid,
+    created_at: new Date(startedAt).toISOString().replace(/\.\d{3}Z$/, "Z"),
+  };
+
+  while (true) {
+    let fd = null;
+    try {
+      fd = fs.openSync(lockPath, "wx");
+      fs.writeFileSync(fd, `${JSON.stringify(payload, null, 2)}\n`, "utf8");
+      return { path: lockPath, lockId };
+    } catch (error) {
+      if (error && error.code !== "EEXIST") {
+        throw error;
+      }
+      if (removeStaleActivePointerLock(lockPath)) {
+        continue;
+      }
+      if (Date.now() - startedAt >= ACTIVE_POINTER_LOCK_TIMEOUT_MS) {
+        throw new Error(`timed out waiting for active pointer lock: ${lockPath}`);
+      }
+      sleepSync(ACTIVE_POINTER_LOCK_POLL_MS);
+    } finally {
+      if (fd !== null) {
+        fs.closeSync(fd);
+      }
+    }
+  }
+}
+
+function releaseActivePointerLock(lock) {
+  if (!lock) {
+    return;
+  }
+
+  try {
+    const payload = readJsonFile(lock.path);
+    if (payload.lock_id === lock.lockId) {
+      fs.rmSync(lock.path, { force: true });
+    }
+  } catch {
+    // A stale-lock cleanup by another process can remove or replace the file first.
+  }
+}
+
+function writeFileAtomic(filePath, contents) {
+  const tempPath = `${filePath}.${process.pid}.${Date.now()}.${atomicWriteCounter += 1}.tmp`;
+  fs.writeFileSync(tempPath, contents, "utf8");
+  fs.renameSync(tempPath, filePath);
+}
+
 function toRepoRelativePath(repoRoot, targetPath) {
   return path.relative(repoRoot, targetPath).split(path.sep).join("/");
 }
@@ -288,7 +411,7 @@ function workflowIdFromPath(outputPath) {
 function writeActivePointer(values) {
   const pointerPath = activePointerPath(values.outputRoot);
   const pointer = {
-    schema_version: "0.2",
+    schema_version: SCHEMA_VERSION,
     type: values.captureType,
     active_capture: toRepoRelativePath(values.repoRoot, values.outputPath),
     workflow_id: values.workflowId,
@@ -303,7 +426,7 @@ function writeActivePointer(values) {
 
   if (!values.dryRun) {
     fs.mkdirSync(path.dirname(pointerPath), { recursive: true });
-    fs.writeFileSync(pointerPath, `${JSON.stringify(pointer, null, 2)}\n`, "utf8");
+    writeFileAtomic(pointerPath, `${JSON.stringify(pointer, null, 2)}\n`);
   }
 
   return pointerPath;
@@ -391,16 +514,13 @@ function buildMarkdown(values) {
     }
   }
 
-  if (Object.keys(stdinSections).length === 0 && values.stdinBody.trim()) {
-    sectionValues.Context = values.stdinBody.trim();
-  }
   if (values.summary.trim() && !isPopulated(sectionValues.Outcome)) {
     sectionValues.Outcome = values.summary.trim();
   }
 
   const lines = [
     "---",
-    "schema_version: \"0.2\"",
+    `schema_version: "${SCHEMA_VERSION}"`,
     `type: ${values.captureType}`,
     `repo_id: ${yamlQuote(values.repoId)}`,
     `repo_name: ${yamlQuote(values.repoName)}`,
@@ -425,6 +545,7 @@ function buildMarkdown(values) {
 
 function main(argv) {
   const warnings = [];
+  let activePointerLock = null;
 
   try {
     const args = parseArgs(argv);
@@ -441,7 +562,7 @@ function main(argv) {
     const outputRoot = path.resolve(path.isAbsolute(outputRootValue) ? outputRootValue : path.join(repoRoot, outputRootValue));
 
     if (config["capture.default_status"] && config["capture.default_status"] !== "raw") {
-      warnings.push("Configured capture.default_status ignored; v0.2 writes raw captures only.");
+      warnings.push(`Configured capture.default_status ignored; v${SCHEMA_VERSION} writes raw captures only.`);
     }
 
     if (args.update && args.updateActive) {
@@ -472,6 +593,36 @@ function main(argv) {
     let mode = "created";
     let createdAt = iso;
     let workflowId = args.workflowId || "";
+
+    const secretRisks = detectSecretRisks([title, args.summary || "", args.tags || "", stdinBody].join("\n"));
+    if (secretRisks.length) {
+      warnings.push(`Potential sensitive details detected: ${secretRisks.join(", ")}`);
+      throw new Error("capture blocked because potential sensitive details were detected");
+    }
+
+    const provisional = buildMarkdown({
+      captureType,
+      title,
+      summary: args.summary || "",
+      stdinBody,
+      repoId,
+      repoName,
+      createdAt: iso,
+      updatedAt: iso,
+      tags: args.tags || "",
+    });
+
+    const sparseWarning = sparseCaptureWarning(provisional.sectionValues);
+    if (sparseWarning) {
+      warnings.push(sparseWarning);
+      if (!args.allowSparse) {
+        throw new Error("capture blocked because it is too sparse");
+      }
+    }
+
+    if (captureType === "session" && !args.dryRun) {
+      activePointerLock = acquireActivePointerLock(outputRoot);
+    }
 
     if (args.updateActive) {
       const active = resolveActivePointerPath(repoRoot, outputRoot);
@@ -509,13 +660,7 @@ function main(argv) {
       workflowId = workflowId || output.captureId;
     }
 
-    const secretRisks = detectSecretRisks([title, args.summary || "", args.tags || "", stdinBody].join("\n"));
-    if (secretRisks.length) {
-      warnings.push(`Potential sensitive details detected: ${secretRisks.join(", ")}`);
-      throw new Error("capture blocked because potential sensitive details were detected");
-    }
-
-    const { markdown, sectionValues } = buildMarkdown({
+    const { markdown } = buildMarkdown({
       captureType,
       title,
       summary: args.summary || "",
@@ -526,14 +671,6 @@ function main(argv) {
       updatedAt: iso,
       tags: args.tags || "",
     });
-
-    const sparseWarning = sparseCaptureWarning(sectionValues);
-    if (sparseWarning) {
-      warnings.push(sparseWarning);
-      if (!args.allowSparse) {
-        throw new Error("capture blocked because it is too sparse");
-      }
-    }
 
     if (!args.dryRun) {
       fs.mkdirSync(path.dirname(outputPath), { recursive: true });
@@ -556,6 +693,9 @@ function main(argv) {
       });
     }
 
+    releaseActivePointerLock(activePointerLock);
+    activePointerLock = null;
+
     const payload = {
       ok: true,
       path: outputPath,
@@ -569,6 +709,7 @@ function main(argv) {
     console.log(JSON.stringify(payload, null, 2));
     return 0;
   } catch (error) {
+    releaseActivePointerLock(activePointerLock);
     console.log(JSON.stringify({ ok: false, error: error.message, warnings }, null, 2));
     return 1;
   }
