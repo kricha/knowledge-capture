@@ -9,7 +9,7 @@ Keep `SKILL.md` concise and put longer details in `skill/knowledge-capture/refer
 ## Maintenance Rules
 
 - Scripts must be deterministic and non-interactive.
-- Use no third-party dependencies for v0.1.
+- Use no third-party dependencies for v0.2.
 - Make no network calls.
 - Add no sync behavior.
 - Add no graph or vector database.

@@ -17,4 +17,4 @@ This skill is portable because the runtime contract is small: write one Markdown
 - Agents without filesystem write access can only draft capture content for a human to save.
 - Agents without Node or shell access can still write a valid capture directly from `raw-capture-schema.md` if they can edit files.
 - Agents without automatic project-instruction triggers need an explicit user request, such as "capture what we learned."
-- Do not connect this skill to platform memory stores, sync services, or background processors in v0.1.
+- Do not connect this skill to platform memory stores, sync services, or background processors in v0.2.
