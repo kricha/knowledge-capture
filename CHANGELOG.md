@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.6 - 2026-07-06
+
+- Shortened skill frontmatter to a discovery-focused description.
+- Bumped raw capture schema version to `0.6`.
+- Updated contract docs from v0.5.1 to v0.6 scope.
+- Moved the source skill directory from `skill/knowledge-capture` to `skills/knowledge-capture`.
+
 ## v0.5.1 - 2026-07-06
 
 - Added MIT licensing.

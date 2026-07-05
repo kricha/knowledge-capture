@@ -15,7 +15,7 @@ What it gives you:
 
 At the implementation level, `knowledge-capture` is a minimal Agent Skill for coding, debugging, investigations, architecture decisions, reviews, and handoffs. It writes one active Markdown capture per current agent session, scoped to its workflow, so future humans or agents can see what changed, what was learned, what was decided, and what remains.
 
-## v0.5.1 Contract
+## v0.6 Contract
 
 - Raw capture only: optional dependency-free Node helper plus direct Markdown fallback.
 - Local-first default: `.ai/raw/` is repo-relative local working state, not shared project documentation. Put `.ai/raw/` in `.gitignore` by default.
@@ -35,7 +35,7 @@ knowledge-capture/
   LICENSE
   README.md
   scripts/install.js
-  skill/knowledge-capture/
+  skills/knowledge-capture/
     SKILL.md
     agents/openai.yaml
     references/
@@ -50,19 +50,19 @@ knowledge-capture/
 Install from the skill directory URL, not the repository root:
 
 ```text
-https://github.com/kricha/knowledge-capture/tree/main/skill/knowledge-capture
+https://github.com/kricha/knowledge-capture/tree/main/skills/knowledge-capture
 ```
 
 Ask your agent:
 
 ```text
-Install the knowledge-capture Agent Skill from https://github.com/kricha/knowledge-capture/tree/main/skill/knowledge-capture into this repo as .agents/skills/knowledge-capture.
+Install the knowledge-capture Agent Skill from https://github.com/kricha/knowledge-capture/tree/main/skills/knowledge-capture into this repo as .agents/skills/knowledge-capture.
 ```
 
 For Codex:
 
 ```text
-$skill-installer install https://github.com/kricha/knowledge-capture/tree/main/skill/knowledge-capture
+$skill-installer install https://github.com/kricha/knowledge-capture/tree/main/skills/knowledge-capture
 ```
 
 Expected install paths:
@@ -81,7 +81,7 @@ node scripts/install.js --scope user
 
 Add `--dry-run` to preview writes. Add `--force` to replace an existing installed copy.
 
-Marketplace installation is out of v0.5.1 scope. For Codex, package this later as a plugin and expose it through a repo, personal, or workspace marketplace.
+Marketplace installation is out of v0.6 scope. For Codex, package this later as a plugin and expose it through a repo, personal, or workspace marketplace.
 
 ## Usage
 
@@ -138,14 +138,14 @@ When updating, rewrite the whole capture as the current workflow summary; do not
 
 The helper intentionally reads only a flat scalar YAML subset from `.ai/config.yaml` and existing capture frontmatter. Config may use top-level scalar keys and one-level scalar sections such as `capture.output_root` with any consistent positive indentation, but not lists, objects, block scalars, anchors, or deeper nesting. `capture.output_root` may be repo-relative, absolute, or `~/...`.
 
-See `skill/knowledge-capture/references/raw-capture-schema.md` for the capture shape.
+See `skills/knowledge-capture/references/raw-capture-schema.md` for the capture shape.
 
 ## Agent Compatibility
 
 | Agent environment | Instruction surface | Notes |
 | --- | --- | --- |
 | Codex | `AGENTS.md`, `.agents/skills/knowledge-capture`, or `~/.agents/skills/knowledge-capture` | Install from the skill directory URL with `$skill-installer`; request capture after meaningful repo work and before the final response. |
-| Claude Code | `CLAUDE.md` | Add the skill to the repo and point project instructions at `skill/knowledge-capture/SKILL.md`. |
+| Claude Code | `CLAUDE.md` | Add the skill to the repo and point project instructions at `skills/knowledge-capture/SKILL.md`. |
 | Cursor | `.cursor/rules/*.mdc` | Add a rule to write a raw capture after meaningful repo work or explicit save requests. |
 | Windsurf | `.windsurfrules` | Add the same instruction as Cursor. |
 | Gemini CLI | `GEMINI.md` | Add the same project instruction. |

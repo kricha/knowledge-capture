@@ -16,7 +16,7 @@ function usage() {
     "Options:",
     "  --scope repo|user   Install into a repository or the current user's skills.",
     "  --target PATH       Repository root for --scope repo. Defaults to cwd.",
-    "  --source PATH       Skill source. Defaults to skill/knowledge-capture.",
+    "  --source PATH       Skill source. Defaults to skills/knowledge-capture.",
     "  --force             Replace an existing installed skill.",
     "  --dry-run           Report the destination without writing files.",
     "  --help              Show this help.",
@@ -27,7 +27,7 @@ function parseArgs(argv) {
   const options = {
     scope: "repo",
     target: process.cwd(),
-    source: path.resolve(__dirname, "..", "skill", SKILL_NAME),
+    source: path.resolve(__dirname, "..", "skills", SKILL_NAME),
     force: false,
     dryRun: false,
   };

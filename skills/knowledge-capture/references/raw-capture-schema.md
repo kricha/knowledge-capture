@@ -6,7 +6,7 @@ Use this when writing a capture manually or changing the shape. This is a raw lo
 
 ```markdown
 ---
-schema_version: "0.5"
+schema_version: "0.6"
 type: session
 repo_id: "my-repo"
 repo_name: "My Repo"
@@ -47,7 +47,7 @@ Keep user constraints, approval gates, task IDs, changed files with concise evid
 
 ## Fields
 
-- `schema_version`: `"0.5"`
+- `schema_version`: `"0.6"`
 - `type`: `session`, `discussion`, `investigation`, `decision`, or `handoff`
 - `repo_id`: stable repo identifier, usually directory slug
 - `repo_name`: human-readable repo name
@@ -92,7 +92,7 @@ For active `session` captures, the helper maintains `active-session.json` in the
 
 ```json
 {
-  "schema_version": "0.5",
+  "schema_version": "0.6",
   "type": "session",
   "active_capture": ".ai/raw/sessions/2026-07-04T18-22-10Z--session--auth-refresh-token-fix.md",
   "workflow_id": "2026-07-04T18-22-10Z--session--auth-refresh-token-fix",

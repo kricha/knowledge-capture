@@ -4,7 +4,7 @@ Example of an updated workflow capture. It is not a transcript; it keeps current
 
 ```markdown
 ---
-schema_version: "0.5"
+schema_version: "0.6"
 type: session
 repo_id: "billing-service"
 repo_name: "Billing Service"
@@ -45,7 +45,7 @@ The active pointer for that workflow would look like:
 
 ```json
 {
-  "schema_version": "0.5",
+  "schema_version": "0.6",
   "type": "session",
   "active_capture": ".ai/raw/sessions/2026-07-04T18-22-10Z--session--invoice-retry-behavior.md",
   "workflow_id": "2026-07-04T18-22-10Z--session--invoice-retry-behavior",

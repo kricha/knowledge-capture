@@ -6,7 +6,7 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const SCHEMA_VERSION = "0.5";
+const SCHEMA_VERSION = "0.6";
 const ACTIVE_POINTER_FILE = "active-session.json";
 const ACTIVE_POINTER_LOCK_FILE = `${ACTIVE_POINTER_FILE}.lock`;
 const ACTIVE_POINTER_LOCK_TIMEOUT_MS = 5000;
