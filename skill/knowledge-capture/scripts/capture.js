@@ -329,14 +329,17 @@ function readGitConfigUser(configPath) {
 function resolveGitChangedBy(repoRoot) {
   for (const configPath of gitConfigPaths(repoRoot)) {
     const user = readGitConfigUser(configPath);
+    if (user.name && user.email) {
+      return `${user.name} (${user.email}) [git]`;
+    }
     if (user.name) {
-      return { changedBy: user.name, source: "git:user.name" };
+      return `${user.name} [git]`;
     }
     if (user.email) {
-      return { changedBy: user.email, source: "git:user.email" };
+      return `${user.email} [git]`;
     }
   }
-  return { changedBy: "", source: "" };
+  return "";
 }
 
 function resolveWhoami() {
@@ -361,15 +364,15 @@ function resolveCaptureIdentity(args, config, repoRoot) {
   ).trim() || "unknown";
   const configuredChangedBy = String(args.changedBy || config["capture.changed_by"] || "").trim();
   if (configuredChangedBy) {
-    return { agent, changedBy: configuredChangedBy, changedBySource: args.changedBy ? "cli" : "config" };
+    return { agent, changedBy: configuredChangedBy };
   }
 
-  const gitIdentity = resolveGitChangedBy(repoRoot);
-  if (gitIdentity.changedBy) {
-    return { agent, changedBy: gitIdentity.changedBy, changedBySource: gitIdentity.source };
+  const gitChangedBy = resolveGitChangedBy(repoRoot);
+  if (gitChangedBy) {
+    return { agent, changedBy: gitChangedBy };
   }
 
-  return { agent, changedBy: resolveWhoami(), changedBySource: "whoami" };
+  return { agent, changedBy: `${resolveWhoami()} [whoami]` };
 }
 
 function slugify(title) {
@@ -604,7 +607,6 @@ function writeActivePointer(values) {
     updated_at: values.updatedAt,
     agent: values.agent,
     changed_by: values.changedBy,
-    changed_by_source: values.changedBySource,
   };
 
   if (values.agentSessionId) {
@@ -715,7 +717,6 @@ function buildMarkdown(values) {
     `updated_at: ${yamlQuote(values.updatedAt)}`,
     `agent: ${yamlQuote(values.agent)}`,
     `changed_by: ${yamlQuote(values.changedBy)}`,
-    `changed_by_source: ${yamlQuote(values.changedBySource)}`,
     `tags: ${yamlList(values.tags)}`,
     "---",
     "",
@@ -807,7 +808,6 @@ function main(argv) {
       repoName,
       agent: identity.agent,
       changedBy: identity.changedBy,
-      changedBySource: identity.changedBySource,
       createdAt: iso,
       updatedAt: iso,
       tags: args.tags || "",
@@ -871,7 +871,6 @@ function main(argv) {
       repoName,
       agent: identity.agent,
       changedBy: identity.changedBy,
-      changedBySource: identity.changedBySource,
       createdAt,
       updatedAt: iso,
       tags: args.tags || "",
@@ -896,7 +895,6 @@ function main(argv) {
         updatedAt: iso,
         agent: identity.agent,
         changedBy: identity.changedBy,
-        changedBySource: identity.changedBySource,
         dryRun: args.dryRun,
       });
     }

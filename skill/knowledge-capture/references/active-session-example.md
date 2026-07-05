@@ -1,6 +1,6 @@
 # Active Session Capture Example
 
-This example shows a capture after the same workflow was updated near the end of a session. It is not a transcript; it keeps current facts, evidence, and decisions.
+Example of an updated workflow capture. It is not a transcript; it keeps current facts, evidence, and decisions.
 
 ```markdown
 ---
@@ -11,8 +11,7 @@ repo_name: "Billing Service"
 created_at: "2026-07-04T18:22:10Z"
 updated_at: "2026-07-04T19:05:44Z"
 agent: "Codex"
-changed_by: "Jane Developer"
-changed_by_source: "git:user.name"
+changed_by: "Jane Developer (jane@example.test) [git]"
 tags: ["billing", "retries"]
 ---
 
@@ -40,7 +39,7 @@ Implemented automatic retry for provider timeouts and kept hard declines as fail
 - Consider adding metrics for retry exhaustion in a later task.
 ```
 
-When updating, rewrite the whole capture for the current workflow state; do not append only the latest delta. Keep superseded decisions only when they caused code, rollback, migration, open risk, or useful context.
+When updating, rewrite the whole capture for the current workflow state. Keep superseded decisions only when they caused code, rollback, migration, open risk, or useful context.
 
 The active pointer for that workflow would look like:
 
@@ -54,12 +53,11 @@ The active pointer for that workflow would look like:
   "created_at": "2026-07-04T18:22:10Z",
   "updated_at": "2026-07-04T19:05:44Z",
   "agent": "Codex",
-  "changed_by": "Jane Developer",
-  "changed_by_source": "git:user.name",
+  "changed_by": "Jane Developer (jane@example.test) [git]",
   "agent_session_id": "optional-agent-session-id"
 }
 ```
 
-With a configured output root outside the repo, the active pointer lives in that output root and `active_capture` should be an absolute local path.
+With a configured output root outside the repo, the active pointer lives there and `active_capture` should be an absolute local path.
 
-`agent_session_id` is optional best-effort metadata; omit it when the runtime does not clearly expose a stable current session, conversation, thread, or run ID. A later agent session should create a new capture and replace the pointer; if it continues invoice retry work, cite this older capture instead of rewriting it.
+`agent_session_id` is optional best-effort metadata; omit it when the runtime does not clearly expose a stable current session, conversation, thread, or run ID. In Codex, pass a verified `/status` ID explicitly; do not assume a shell variable. A later agent session should create a new capture and cite this one if needed.

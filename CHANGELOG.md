@@ -1,10 +1,19 @@
 # Changelog
 
+## v0.5.1 - 2026-07-06
+
+- Added MIT licensing.
+- Added README positioning for wiki/LLM knowledge-base ingestion workflows.
+- Separated marketing-facing README language from agent-optimized skill docs.
+- Collapsed `changed_by_source` into compact `changed_by` provenance suffixes.
+- Clarified Codex session IDs as explicit runtime values, not assumed shell variables.
+- Compacted skill docs while keeping raw capture schema version `0.5`.
+
 ## v0.5 - 2026-07-05
 
 - Added configurable local output roots for vault/inbox placement via `capture.output_root` or `--output-root`.
 - Added stricter capture-quality guidance to keep durable context and drop receipt-like command noise.
-- Added capture identity metadata: `agent`, `changed_by`, and `changed_by_source`.
+- Added capture identity metadata: `agent` and `changed_by`.
 - Bumped raw capture schema version to `0.5`.
 
 ## v0.4 - 2026-07-05

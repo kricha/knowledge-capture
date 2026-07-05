@@ -13,6 +13,7 @@ const SKILL_MD = path.join(SKILL_ROOT, "SKILL.md");
 const REFERENCES = path.join(SKILL_ROOT, "references");
 const CAPTURE_JS = path.join(SKILL_ROOT, "scripts", "capture.js");
 const INSTALL_JS = path.join(PROJECT_ROOT, "scripts", "install.js");
+const LICENSE = path.join(PROJECT_ROOT, "LICENSE");
 
 function read(filePath) {
   return fs.readFileSync(filePath, "utf8");
@@ -66,6 +67,10 @@ function packageText() {
   return files.map(read).join("\n");
 }
 
+function lineCount(filePath) {
+  return read(filePath).split(/\r?\n/).length;
+}
+
 test("skill package has one optional dependency-free Node helper", () => {
   assert.ok(fs.statSync(path.join(SKILL_ROOT, "scripts")).isDirectory());
   assert.ok(fs.statSync(CAPTURE_JS).isFile());
@@ -108,19 +113,38 @@ test("skill package has no Python or package-install dependency", () => {
   }
 });
 
+test("installed skill docs stay compact", () => {
+  assert.ok(lineCount(SKILL_MD) <= 70);
+  assert.ok(lineCount(path.join(REFERENCES, "raw-capture-schema.md")) <= 130);
+  assert.ok(lineCount(path.join(REFERENCES, "active-session-example.md")) <= 70);
+});
+
+test("root package has MIT license", () => {
+  const license = read(LICENSE);
+  assert.ok(license.startsWith("MIT License"));
+  assert.ok(license.includes("Copyright (c) 2026 Oleksii"));
+  assert.ok(license.includes('THE SOFTWARE IS PROVIDED "AS IS"'));
+});
+
 test("README makes agent prompt and skill-installer the primary install path", () => {
   const readme = read(path.join(PROJECT_ROOT, "README.md"));
-  assert.ok(readme.includes("## v0.5 Contract"));
+  assert.ok(readme.includes("## v0.5.1 Contract"));
   assert.ok(readme.includes("CHANGELOG.md"));
+  assert.ok(readme.includes("LICENSE"));
   assert.ok(readme.includes("https://github.com/kricha/knowledge-capture/tree/main/skill/knowledge-capture"));
+  assert.ok(readme.includes('Stop losing the "why" behind agent work.'));
   assert.ok(readme.includes("future humans or agents can see what changed"));
-  assert.ok(readme.includes("configured local output root such as a vault inbox"));
+  assert.ok(readme.includes("local ingestion layer for any wiki/LLM knowledge-base workflow"));
+  assert.ok(readme.includes("saves that raw context before it evaporates"));
+  assert.ok(readme.includes("It is not a sync engine, vector database, or durable memory system"));
+  assert.ok(readme.includes("vault, wiki, RAG pipeline, or team knowledge process"));
+  assert.ok(readme.includes("Continuity across agent sessions"));
+  assert.ok(readme.includes("configured local vault/inbox"));
   assert.ok(readme.includes("one active Markdown capture per current agent session"));
   assert.ok(readme.includes(".ai/raw/active-session.json"));
   assert.ok(readme.includes("Put `.ai/raw/` in `.gitignore` by default"));
   assert.ok(readme.includes("Configurable local output"));
   assert.ok(readme.includes("repo-relative, absolute, or `~/...` local path"));
-  assert.ok(readme.includes("rare command output that changes the outcome"));
   assert.ok(readme.includes("not shared project documentation"));
   assert.ok(readme.includes("active-session.json.lock` in the output root"));
   assert.ok(readme.includes("stale-lock cleanup"));
@@ -131,15 +155,15 @@ test("README makes agent prompt and skill-installer the primary install path", (
   assert.ok(readme.includes("Project instructions are loaded for normal coding tasks"));
   assert.ok(readme.includes("Create or update the current agent-session capture"));
   assert.ok(readme.includes("pass sectioned details through `--stdin`"));
-  assert.ok(readme.includes("A title plus `--summary` is intentionally too sparse"));
+  assert.ok(readme.includes("a title plus `--summary` is intentionally too sparse"));
   assert.ok(readme.includes("Use `--update <path>` when the active capture path is known"));
-  assert.ok(readme.includes("Use `--update-active` only when `.ai/raw/active-session.json` belongs to the current session"));
-  assert.ok(readme.includes("for configured roots, apply the same rule to the output root's `active-session.json`"));
+  assert.ok(readme.includes("Use `--update-active` only when `.ai/raw/active-session.json`, or the configured root's `active-session.json`"));
   assert.ok(readme.includes("output_root: ~/vault/agent-inbox"));
   assert.ok(readme.includes("agent: Codex"));
   assert.ok(readme.includes("changed_by: Jane Developer"));
-  assert.ok(readme.includes("Captures include `agent`, `changed_by`, and `changed_by_source`"));
-  assert.ok(readme.includes("local git user config for `changed_by`, then a whoami fallback"));
+  assert.ok(readme.includes("Captures include `agent` and `changed_by`"));
+  assert.ok(readme.includes("Name (email) [git]"));
+  assert.ok(readme.includes("user [whoami]"));
   assert.ok(readme.includes("does not sync, index, publish, or promote captures"));
   assert.ok(readme.includes("Read `.ai/config.yaml` when accessible"));
   assert.ok(readme.includes("if `capture.output_root` is set, write under that local root"));
@@ -156,7 +180,7 @@ test("README makes agent prompt and skill-installer the primary install path", (
   assert.ok(readme.includes("A later agent session may cite the old capture, but should start a new capture file"));
   assert.ok(readme.includes("Keep superseded decisions only when they explain implemented code"));
   assert.ok(readme.includes("list changed project files and concise evidence"));
-  assert.ok(readme.includes("omit routine `rg`, `git diff`, `git status`, test, build, and format commands"));
+  assert.ok(readme.includes("Omit routine `rg`, `git diff`, `git status`, test, build, and format commands"));
   assert.ok(readme.includes("flat scalar YAML subset"));
   assert.ok(readme.includes("with any consistent positive indentation"));
   assert.ok(readme.includes("lists, objects, block scalars, anchors, or deeper nesting"));
@@ -165,6 +189,8 @@ test("README makes agent prompt and skill-installer the primary install path", (
   assert.ok(readme.includes("custom package archive"));
   assert.ok(readme.includes("download-script installer"));
   assert.ok(readme.includes("package this later as a plugin"));
+  assert.ok(readme.includes("Marketplace installation is out of v0.5.1 scope"));
+  assert.ok(readme.includes("MIT. See `LICENSE`."));
   assert.ok(readme.includes("node scripts/install.js --scope repo"));
   assert.ok(readme.includes("node scripts/install.js --scope user"));
   assert.ok(!readme.includes(".agent-skill.tgz"));
@@ -181,6 +207,11 @@ test("README makes agent prompt and skill-installer the primary install path", (
 
 test("root changelog records skill progress outside installed package", () => {
   const changelog = read(path.join(PROJECT_ROOT, "CHANGELOG.md"));
+  assert.ok(changelog.includes("## v0.5.1 - 2026-07-06"));
+  assert.ok(changelog.includes("Added MIT licensing"));
+  assert.ok(changelog.includes("wiki/LLM knowledge-base ingestion workflows"));
+  assert.ok(changelog.includes("marketing-facing README language from agent-optimized skill docs"));
+  assert.ok(changelog.includes("raw capture schema version `0.5`"));
   assert.ok(changelog.includes("## v0.5 - 2026-07-05"));
   assert.ok(changelog.includes("configurable local output roots"));
   assert.ok(changelog.includes("capture identity metadata"));
@@ -199,7 +230,7 @@ test("raw captures are gitignored local working state", () => {
 
   assert.match(gitignore, /^\.ai\/raw\/$/m);
   assert.ok(readme.includes("repo-relative local working state"));
-  assert.ok(readme.includes("configured local output root"));
+  assert.ok(readme.includes("configured local vault/inbox"));
   assert.ok(readme.includes("Put `.ai/raw/` in `.gitignore` by default"));
   assert.ok(readme.includes("active-session.json.lock` in the output root"));
   assert.ok(readme.includes("stale-lock cleanup"));
@@ -289,7 +320,6 @@ test("schema contains required fields and sections", () => {
     "updated_at",
     "agent",
     "changed_by",
-    "changed_by_source",
     "active_capture",
     "workflow_id",
     "agent_session_id",
@@ -303,6 +333,7 @@ test("schema contains required fields and sections", () => {
     "capture_id:",
     "human_reviewed:",
     "sync_status:",
+    "changed_by_source",
   ]) {
     assert.ok(!schema.includes(removedField), removedField);
   }
@@ -322,7 +353,8 @@ test("schema contains required fields and sections", () => {
   assert.ok(schema.includes("`capture.output_root` may be repo-relative, absolute, or home-relative with `~/`"));
   assert.ok(schema.includes("`agent`: agent/tool that authored or updated the capture"));
   assert.ok(schema.includes("`changed_by`: person/account associated with the repo change"));
-  assert.ok(schema.includes("`changed_by_source`: one of `config`, `cli`, `git:user.name`, `git:user.email`, or `whoami`"));
+  assert.ok(schema.includes("git auto-detect writes `Name (email) [git]`"));
+  assert.ok(schema.includes("whoami writes `user [whoami]`"));
   assert.ok(schema.includes("It does not sync, publish, index, promote durable memory"));
   assert.ok(schema.includes("Without Node or shell execution, read `.ai/config.yaml` when accessible"));
   assert.ok(schema.includes("If `capture.output_root` is set, write directly under that root"));
@@ -337,8 +369,8 @@ test("schema contains required fields and sections", () => {
   assert.ok(schema.includes("omit routine `rg`, `git diff`, `git status`, test, build, and format commands"));
   assert.ok(schema.includes("Do not add separate `Verification`, `Commands run`, `Context`, or sensitive-info-check sections"));
   assert.ok(schema.includes("Capture durable context, not proof of diligence"));
-  assert.ok(schema.includes("Merge routine verification into one sentence"));
-  assert.ok(schema.includes("Keep exact commands only when unusual, newly introduced, flaky, failed first, or required to reproduce a rare result"));
+  assert.ok(schema.includes("merge routine verification into one sentence"));
+  assert.ok(schema.includes("keep exact commands only when unusual, newly introduced, flaky, failed first, or required to reproduce a rare result"));
   assert.ok(schema.includes("flat scalar subset only"));
   assert.ok(schema.includes("with any consistent positive indentation"));
   assert.ok(schema.includes("lists, objects, block scalars, anchors, and deeper nesting are unsupported"));
@@ -369,22 +401,21 @@ test("scope excludes processing and sync", () => {
   assert.ok(skill.includes("do not read, update, deduplicate, merge, sync, commit, publish, or promote unrelated captures"));
   assert.ok(skill.includes("Default output root is `.ai/raw/`"));
   assert.ok(skill.includes("capture.output_root"));
-  assert.ok(skill.includes("Captures include `agent`, `changed_by`, and `changed_by_source`"));
-  assert.ok(skill.includes("local git user config for `changed_by`, then whoami"));
+  assert.ok(skill.includes("Captures include `agent` and `changed_by`"));
+  assert.ok(skill.includes("git auto-detect writes `Name (email) [git]`"));
+  assert.ok(skill.includes("whoami writes `user [whoami]`"));
   assert.ok(skill.includes("repo-relative, absolute, or `~/...` path"));
-  assert.ok(skill.includes("Raw/local-only state comes from the configured output root"));
   assert.ok(skill.includes("Direct file creation remains valid"));
   assert.ok(skill.includes("If Node or shell execution is unavailable"));
   assert.ok(skill.includes("if `capture.output_root` is set, write under that local root"));
   assert.ok(skill.includes("Treat installed skill files as vendored tool code"));
   assert.ok(skill.includes("Node/CommonJS helper"));
   assert.ok(skill.includes("Changes and evidence"));
-  assert.ok(skill.includes("changed project files, concise evidence, and handoff text"));
   assert.ok(skill.includes("changed project files and concise evidence"));
-  assert.ok(skill.includes("omit routine `rg`, `git diff`, `git status`, test, build, and format commands"));
+  assert.ok(skill.includes("Omit routine `rg`, `git diff`, `git status`, test, build, and format commands"));
   assert.ok(skill.includes("Capture durable context, not proof of diligence"));
   assert.ok(skill.includes("quality-filter pass"));
-  assert.ok(skill.includes("Do not add extra top-level sections for command logs or verification"));
+  assert.ok(skill.includes("summarize verification there too"));
   assert.ok(!skill.includes("diffs, tests, command results"));
   assert.ok(skill.includes("Treat `/capture` as create/update current-session capture"));
   assert.ok(skill.includes("`/capture <type>`"));
@@ -393,7 +424,7 @@ test("scope excludes processing and sync", () => {
   assert.ok(skill.includes("write the whole capture as it should stand after the current workflow step"));
   assert.ok(skill.includes("Do not append a delta-only note"));
   assert.ok(skill.includes("Do not leave `Not captured.` in sections whose facts are known"));
-  assert.ok(skill.includes("avoid boilerplate repo summaries"));
+  assert.ok(skill.includes("delete boilerplate repo summaries"));
   assert.ok(skill.includes("## Automatic Use"));
   assert.ok(skill.includes("Before the final response for any repo task"));
   assert.ok(skill.includes("save exactly one current-session `session` capture"));
@@ -402,6 +433,9 @@ test("scope excludes processing and sync", () => {
   assert.ok(skill.includes("`--update-active`"));
   assert.ok(skill.includes("Use `--agent-session-id` only when the runtime clearly exposes"));
   assert.ok(skill.includes("If not available, omit it. Never invent one."));
+  assert.ok(skill.includes("For Codex, `/status` may show a session ID"));
+  assert.ok(skill.includes("Do not assume `CURRENT_AGENT_SESSION_ID`, `CODEX_SESSION_ID`, or `SESSION_ID`"));
+  assert.ok(!skill.includes("$CURRENT_AGENT_SESSION_ID"));
   assert.ok(skill.includes("should be gitignored by default"));
   assert.ok(skill.includes("active-session.json.lock"));
   assert.ok(skill.includes("stale-lock cleanup"));
@@ -430,18 +464,31 @@ test("active session example models current decisions", () => {
   assert.ok(example.includes("active_capture"));
   assert.ok(example.includes("agent_session_id"));
   assert.ok(example.includes('agent: "Codex"'));
-  assert.ok(example.includes('changed_by: "Jane Developer"'));
-  assert.ok(example.includes('changed_by_source: "git:user.name"'));
+  assert.ok(example.includes('changed_by: "Jane Developer (jane@example.test) [git]"'));
+  assert.ok(!example.includes("changed_by_source"));
   assert.ok(example.includes("Final decision: provider timeouts stay retryable"));
   assert.ok(example.includes("Added invoice tests for timeout retry and hard-decline failure."));
   assert.ok(example.includes("Verified retry/status behavior with targeted invoice tests."));
   assert.ok(example.includes("The earlier `pending_review` idea was not implemented"));
   assert.ok(example.includes("superseded decision"));
   assert.ok(example.includes("A later agent session should create a new capture"));
+  assert.ok(example.includes("pass a verified `/status` ID explicitly"));
   assert.ok(example.includes("configured output root outside the repo"));
   assert.ok(!example.includes("Ran `npm test"));
   assert.ok(!example.includes("## Context"));
   assert.ok(!example.includes("## Candidate future memory"));
+});
+
+test("docs do not present Codex session id placeholders as shell variables", () => {
+  const readme = read(path.join(PROJECT_ROOT, "README.md"));
+  const skill = read(SKILL_MD);
+  const rawSchema = read(path.join(REFERENCES, "raw-capture-schema.md"));
+  const combinedDocs = [readme, skill, rawSchema].join("\n");
+
+  assert.ok(combinedDocs.includes('--agent-session-id "<runtime-session-id>"'));
+  assert.ok(readme.includes("pass a verified ID explicitly or omit `--agent-session-id`"));
+  assert.ok(rawSchema.includes("pass a verified ID explicitly or omit `--agent-session-id`"));
+  assert.ok(!combinedDocs.includes('--agent-session-id "$CURRENT_AGENT_SESSION_ID"'));
 });
 
 test("OpenAI metadata points to skill", () => {
@@ -457,6 +504,7 @@ test("optional Node helper creates valid capture", () => {
   fs.writeFileSync(path.join(repo, ".git", "config"), [
     "[user]",
     "  name = Repo Person",
+    "  email = repo@example.test",
     "",
   ].join("\n"), "utf8");
   const stdin = [
@@ -516,8 +564,8 @@ test("optional Node helper creates valid capture", () => {
   assert.ok(text.includes("created_at:"));
   assert.ok(text.includes("updated_at:"));
   assert.ok(text.includes('agent: "Codex"'));
-  assert.ok(text.includes('changed_by: "Repo Person"'));
-  assert.ok(text.includes('changed_by_source: "git:user.name"'));
+  assert.ok(text.includes('changed_by: "Repo Person (repo@example.test) [git]"'));
+  assert.ok(!text.includes("changed_by_source"));
   assert.ok(!text.includes("status: raw"));
   assert.ok(!text.includes("capture_id:"));
   assert.ok(!text.includes("human_reviewed:"));
@@ -552,8 +600,8 @@ test("optional Node helper creates valid capture", () => {
   assert.ok(pointer.created_at);
   assert.ok(pointer.updated_at);
   assert.strictEqual(pointer.agent, "Codex");
-  assert.strictEqual(pointer.changed_by, "Repo Person");
-  assert.strictEqual(pointer.changed_by_source, "git:user.name");
+  assert.strictEqual(pointer.changed_by, "Repo Person (repo@example.test) [git]");
+  assert.ok(!Object.prototype.hasOwnProperty.call(pointer, "changed_by_source"));
   assert.ok(!fs.existsSync(path.join(repo, ".ai", "raw", "active-session.json.lock")));
 });
 
@@ -587,9 +635,9 @@ test("optional Node helper falls back to whoami for changed_by", () => {
   assert.strictEqual(result.status, 0, result.stderr);
   const payload = JSON.parse(result.stdout);
   const text = read(payload.path);
-  assert.ok(text.includes('changed_by_source: "whoami"'));
-  assert.match(text, /changed_by: "[^"]+"/);
-  assert.strictEqual(readJson(payload.active_pointer).changed_by_source, "whoami");
+  assert.ok(!text.includes("changed_by_source"));
+  assert.match(text, /changed_by: "[^"]+ \[whoami\]"/);
+  assert.match(readJson(payload.active_pointer).changed_by, / \[whoami\]$/);
 });
 
 test("optional Node helper cleans stale active pointer lock", () => {
@@ -1129,7 +1177,7 @@ test("optional Node helper writes to configured external output root", () => {
   assertPointerTargets(repo, pointer, firstPayload.path);
   assert.strictEqual(pointer.agent, "Codex");
   assert.strictEqual(pointer.changed_by, "Vault Person");
-  assert.strictEqual(pointer.changed_by_source, "config");
+  assert.ok(!Object.prototype.hasOwnProperty.call(pointer, "changed_by_source"));
   assert.ok(read(firstPayload.path).includes('changed_by: "Vault Person"'));
 
   const second = spawnSync(process.execPath, [
