@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.7.1 - 2026-07-07
+
+- Rejected unknown helper CLI options and documented consistent `--key=value` parsing.
+- Strengthened sparse capture validation around `User request` plus substantive evidence.
+- Split detailed installation options into `INSTALLATION.md` while keeping README install quick.
+- Aligned plugin and agent metadata descriptions.
+
 ## v0.7 - 2026-07-07
 
 - Breaking: renamed repo-local capture state from `.ai/` to `.capture/`, including default captures at `.capture/raw/`, config at `.capture/config.yaml`, and the active pointer at `.capture/pointer.json`.

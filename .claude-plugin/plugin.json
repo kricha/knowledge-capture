@@ -1,7 +1,7 @@
 {
   "name": "knowledge-capture",
   "displayName": "Knowledge Capture",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "description": "Capture agent decisions, evidence, changes, and next steps as local Markdown.",
   "author": {
     "name": "kRicha",

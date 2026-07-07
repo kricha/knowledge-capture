@@ -30,73 +30,13 @@ This project is deliberately small. It does not sync, index, publish, promote du
 
 ## Install
 
-### Codex Plugin
-
-For Codex, install the plugin from this repository's marketplace:
+Fastest path:
 
 ```bash
-git clone https://github.com/kricha/knowledge-capture.git
-cd knowledge-capture
-codex plugin marketplace add "$PWD"
-codex plugin add knowledge-capture@knowledge-capture
+npx skills add kricha/knowledge-capture -s knowledge-capture
 ```
 
-Start a new Codex thread after installing so the skill is loaded into the session.
-
-### Claude Code Plugin
-
-For Claude Code, add this repository as a plugin marketplace and install the plugin:
-
-```text
-/plugin marketplace add kricha/knowledge-capture
-/plugin install knowledge-capture@knowledge-capture
-```
-
-For local development from a checkout:
-
-```text
-/plugin marketplace add /absolute/path/to/knowledge-capture
-/plugin install knowledge-capture@knowledge-capture
-```
-
-Run `/reload-plugins` or start a new Claude Code session after installing.
-
-### Direct Agent Skill
-
-For OpenCode, Hermes, and other agents that load `SKILL.md` packages directly, install from the skill directory URL, not the repository root:
-
-```text
-https://github.com/kricha/knowledge-capture/tree/main/skills/knowledge-capture
-```
-
-Ask your agent:
-
-```text
-Install the knowledge-capture Agent Skill from https://github.com/kricha/knowledge-capture/tree/main/skills/knowledge-capture into this repo as .agents/skills/knowledge-capture.
-```
-
-For Codex direct skill installation:
-
-```text
-$skill-installer install https://github.com/kricha/knowledge-capture/tree/main/skills/knowledge-capture
-```
-
-Then add a repo instruction such as:
-
-```text
-After any coding task with changed files, run $knowledge-capture before the final response. Save what changed, what was learned, what was decided, and what remains next.
-```
-
-Expected install paths:
-
-```text
-.agents/skills/knowledge-capture/SKILL.md
-~/.agents/skills/knowledge-capture/SKILL.md
-.opencode/skills/knowledge-capture/SKILL.md
-~/.config/opencode/skills/knowledge-capture/SKILL.md
-.claude/skills/knowledge-capture/SKILL.md
-~/.claude/skills/knowledge-capture/SKILL.md
-```
+For Codex plugin, Claude Code, OpenCode, direct skill installs, and checkout-based installs into another repo, see [INSTALLATION.md](INSTALLATION.md).
 
 ## Keep Captures Local
 

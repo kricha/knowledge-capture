@@ -1,4 +1,4 @@
 interface:
   display_name: "Knowledge Capture"
-  short_description: "Save local raw repo notes"
+  short_description: "Capture agent decisions, evidence, changes, and next steps as local Markdown."
   default_prompt: "Use $knowledge-capture after meaningful repo work to save what changed, what was learned, what was decided, and what is next."

@@ -31,6 +31,29 @@ const REQUIRED_SECTIONS = [
   "Open questions and next steps",
 ];
 
+const VALUE_OPTIONS = {
+  "--summary": "summary",
+  "--tags": "tags",
+  "--repo-root": "repoRoot",
+  "--output-root": "outputRoot",
+  "--update": "update",
+  "--agent": "agent",
+  "--changed-by": "changedBy",
+  "--agent-session-id": "agentSessionId",
+  "--workflow-id": "workflowId",
+  "--type": "type",
+  "--title": "title",
+};
+
+const BOOLEAN_OPTIONS = {
+  "--stdin": "stdin",
+  "--dry-run": "dryRun",
+  "--allow-sparse": "allowSparse",
+  "--update-active": "updateActive",
+  "--help": "help",
+  "-h": "help",
+};
+
 const SECRET_PATTERNS = [
   ["private-key", /-----BEGIN [A-Z ]*PRIVATE KEY-----/],
   ["aws-access-key", /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/],
@@ -90,23 +113,28 @@ function parseArgs(argv) {
 
   for (let index = 0; index < argv.length; index += 1) {
     const arg = argv[index];
-    if (arg === "--stdin") {
-      args.stdin = true;
-    } else if (arg === "--dry-run") {
-      args.dryRun = true;
-    } else if (arg === "--allow-sparse") {
-      args.allowSparse = true;
-    } else if (arg === "--update-active") {
-      args.updateActive = true;
-    } else if (arg === "--help" || arg === "-h") {
-      args.help = true;
-    } else if (arg.startsWith("--")) {
-      const key = arg.slice(2).replace(/-([a-z])/g, (_, char) => char.toUpperCase());
-      if (index + 1 >= argv.length || argv[index + 1].startsWith("--")) {
-        throw new Error(`${arg} requires a value`);
+    const equalsAt = arg.indexOf("=");
+    const option = equalsAt >= 0 ? arg.slice(0, equalsAt) : arg;
+
+    if (Object.prototype.hasOwnProperty.call(BOOLEAN_OPTIONS, arg)) {
+      args[BOOLEAN_OPTIONS[arg]] = true;
+    } else if (Object.prototype.hasOwnProperty.call(BOOLEAN_OPTIONS, option)) {
+      throw new Error(`${option} does not take a value`);
+    } else if (Object.prototype.hasOwnProperty.call(VALUE_OPTIONS, option)) {
+      if (equalsAt >= 0) {
+        args[VALUE_OPTIONS[option]] = arg.slice(equalsAt + 1);
+      } else {
+        if (index + 1 >= argv.length || argv[index + 1].startsWith("--")) {
+          throw new Error(`${arg} requires a value`);
+        }
+        args[VALUE_OPTIONS[option]] = argv[index + 1];
+        index += 1;
       }
-      args[key] = argv[index + 1];
-      index += 1;
+    } else if (arg.startsWith("--")) {
+      if (equalsAt >= 0) {
+        throw new Error(`unknown option: ${option}`);
+      }
+      throw new Error(`unknown option: ${arg}`);
     } else {
       throw new Error(`unexpected argument: ${arg}`);
     }
@@ -685,12 +713,29 @@ function isPopulated(value) {
 }
 
 function sparseCaptureWarning(sectionValues) {
-  const nonOutcomeSections = REQUIRED_SECTIONS
-    .filter((section) => section !== "Outcome")
-    .filter((section) => isPopulated(sectionValues[section]));
+  const substanceSections = [
+    "Changes and evidence",
+    "Decisions and discoveries",
+    "Open questions and next steps",
+  ];
+  const missing = [];
 
-  if (nonOutcomeSections.length === 0) {
-    return "Capture is too sparse; pass sectioned details through --stdin or write Markdown directly.";
+  if (!isPopulated(sectionValues["User request"])) {
+    missing.push("populated User request");
+  }
+  if (
+    !substanceSections.some((section) => isPopulated(sectionValues[section]))
+  ) {
+    missing.push(
+      `at least one populated substance section (${substanceSections.join(", ")})`,
+    );
+  }
+
+  if (missing.length > 0) {
+    return [
+      `Capture is too sparse; missing ${missing.join(" and ")}.`,
+      "Pass sectioned details through --stdin or use --allow-sparse.",
+    ].join(" ");
   }
   return "";
 }
@@ -820,7 +865,7 @@ function main(argv) {
     if (sparseWarning) {
       warnings.push(sparseWarning);
       if (!args.allowSparse) {
-        throw new Error("capture blocked because it is too sparse");
+        throw new Error(`capture blocked because it is too sparse: ${sparseWarning}`);
       }
     }
 

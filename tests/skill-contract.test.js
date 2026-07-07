@@ -34,7 +34,29 @@ const CLAUDE_MARKETPLACE_JSON = path.join(
   "marketplace.json",
 );
 const INSTALL_JS = path.join(PROJECT_ROOT, "scripts", "install.js");
+const INSTALLATION_MD = path.join(PROJECT_ROOT, "INSTALLATION.md");
 const LICENSE = path.join(PROJECT_ROOT, "LICENSE");
+const CANONICAL_PLUGIN_NAME = "knowledge-capture";
+const CANONICAL_DISPLAY_NAME = "Knowledge Capture";
+const CANONICAL_VERSION = "0.7.1";
+const CANONICAL_DESCRIPTION =
+  "Capture agent decisions, evidence, changes, and next steps as local Markdown.";
+const CANONICAL_AUTHOR = {
+  name: "kRicha",
+  url: "https://github.com/kricha",
+};
+const CANONICAL_HOMEPAGE = "https://github.com/kricha/knowledge-capture";
+const CANONICAL_REPOSITORY = "https://github.com/kricha/knowledge-capture";
+const CANONICAL_LICENSE = "MIT";
+const CANONICAL_SKILLS_PATH = "./skills/";
+const CANONICAL_MARKETPLACE_SOURCE = "./";
+const CANONICAL_KEYWORDS = [
+  "agent-skill",
+  "knowledge-capture",
+  "handoff",
+  "local-first",
+  "markdown",
+];
 
 function read(filePath) {
   return fs.readFileSync(filePath, "utf8");
@@ -134,34 +156,24 @@ test("skill package has one optional dependency-free Node helper", () => {
 
 test("Codex plugin manifest exposes the source skill through marketplace", () => {
   const manifest = readJson(CODEX_PLUGIN_MANIFEST);
-  assert.strictEqual(manifest.name, "knowledge-capture");
-  assert.strictEqual(manifest.version, "0.7.0");
-  assert.strictEqual(
-    manifest.description,
-    "Capture agent decisions, evidence, changes, and next steps as local Markdown.",
-  );
-  assert.deepStrictEqual(manifest.author, {
-    name: "kRicha",
-    url: "https://github.com/kricha",
-  });
-  assert.strictEqual(manifest.homepage, "https://github.com/kricha/knowledge-capture");
-  assert.strictEqual(manifest.repository, "https://github.com/kricha/knowledge-capture");
-  assert.strictEqual(manifest.license, "MIT");
-  assert.ok(manifest.keywords.includes("agent-skill"));
-  assert.ok(manifest.keywords.includes("local-first"));
-  assert.strictEqual(manifest.skills, "./skills/");
-  assert.strictEqual(manifest.interface.displayName, "Knowledge Capture");
+  assert.strictEqual(manifest.name, CANONICAL_PLUGIN_NAME);
+  assert.strictEqual(manifest.version, CANONICAL_VERSION);
+  assert.strictEqual(manifest.description, CANONICAL_DESCRIPTION);
+  assert.deepStrictEqual(manifest.author, CANONICAL_AUTHOR);
+  assert.strictEqual(manifest.homepage, CANONICAL_HOMEPAGE);
+  assert.strictEqual(manifest.repository, CANONICAL_REPOSITORY);
+  assert.strictEqual(manifest.license, CANONICAL_LICENSE);
+  assert.deepStrictEqual(manifest.keywords, CANONICAL_KEYWORDS);
+  assert.strictEqual(manifest.skills, CANONICAL_SKILLS_PATH);
+  assert.strictEqual(manifest.interface.displayName, CANONICAL_DISPLAY_NAME);
   assert.strictEqual(
     manifest.interface.shortDescription,
-    "Save useful agent-session context as local Markdown.",
+    CANONICAL_DESCRIPTION,
   );
   assert.strictEqual(manifest.interface.developerName, "kRicha");
   assert.strictEqual(manifest.interface.category, "Productivity");
   assert.deepStrictEqual(manifest.interface.capabilities, ["Write"]);
-  assert.strictEqual(
-    manifest.interface.websiteURL,
-    "https://github.com/kricha/knowledge-capture",
-  );
+  assert.strictEqual(manifest.interface.websiteURL, CANONICAL_HOMEPAGE);
   assert.deepStrictEqual(manifest.interface.defaultPrompt, [
     "Capture the current coding session.",
     "Save decisions and next steps.",
@@ -171,17 +183,17 @@ test("Codex plugin manifest exposes the source skill through marketplace", () =>
   assert.ok(!JSON.stringify(manifest).includes("[TODO:"));
 
   const marketplace = readJson(CODEX_MARKETPLACE_JSON);
-  assert.strictEqual(marketplace.name, "knowledge-capture");
+  assert.strictEqual(marketplace.name, CANONICAL_PLUGIN_NAME);
   assert.strictEqual(
     marketplace.interface.displayName,
-    "Knowledge Capture",
+    CANONICAL_DISPLAY_NAME,
   );
   assert.strictEqual(marketplace.plugins.length, 1);
   assert.deepStrictEqual(marketplace.plugins[0], {
-    name: "knowledge-capture",
+    name: CANONICAL_PLUGIN_NAME,
     source: {
       source: "local",
-      path: "./",
+      path: CANONICAL_MARKETPLACE_SOURCE,
     },
     policy: {
       installation: "AVAILABLE",
@@ -194,55 +206,39 @@ test("Codex plugin manifest exposes the source skill through marketplace", () =>
 
 test("Claude Code plugin manifest exposes the source skill through marketplace", () => {
   const manifest = readJson(CLAUDE_PLUGIN_MANIFEST);
-  assert.strictEqual(manifest.name, "knowledge-capture");
-  assert.strictEqual(manifest.displayName, "Knowledge Capture");
-  assert.strictEqual(manifest.version, "0.7.0");
-  assert.strictEqual(
-    manifest.description,
-    "Capture agent decisions, evidence, changes, and next steps as local Markdown.",
-  );
-  assert.deepStrictEqual(manifest.author, {
-    name: "kRicha",
-    url: "https://github.com/kricha",
-  });
-  assert.strictEqual(manifest.homepage, "https://github.com/kricha/knowledge-capture");
-  assert.strictEqual(manifest.repository, "https://github.com/kricha/knowledge-capture");
-  assert.strictEqual(manifest.license, "MIT");
-  assert.ok(manifest.keywords.includes("agent-skill"));
-  assert.ok(manifest.keywords.includes("local-first"));
-  assert.strictEqual(manifest.skills, "./skills/");
+  assert.strictEqual(manifest.name, CANONICAL_PLUGIN_NAME);
+  assert.strictEqual(manifest.displayName, CANONICAL_DISPLAY_NAME);
+  assert.strictEqual(manifest.version, CANONICAL_VERSION);
+  assert.strictEqual(manifest.description, CANONICAL_DESCRIPTION);
+  assert.deepStrictEqual(manifest.author, CANONICAL_AUTHOR);
+  assert.strictEqual(manifest.homepage, CANONICAL_HOMEPAGE);
+  assert.strictEqual(manifest.repository, CANONICAL_REPOSITORY);
+  assert.strictEqual(manifest.license, CANONICAL_LICENSE);
+  assert.deepStrictEqual(manifest.keywords, CANONICAL_KEYWORDS);
+  assert.strictEqual(manifest.skills, CANONICAL_SKILLS_PATH);
   assert.ok(!JSON.stringify(manifest).includes("[TODO:"));
 
   const marketplace = readJson(CLAUDE_MARKETPLACE_JSON);
-  assert.strictEqual(marketplace.name, "knowledge-capture");
+  assert.strictEqual(marketplace.name, CANONICAL_PLUGIN_NAME);
   assert.deepStrictEqual(marketplace.owner, { name: "kRicha" });
-  assert.strictEqual(
-    marketplace.description,
-    "Local-first agent knowledge capture tools.",
-  );
+  assert.strictEqual(marketplace.description, CANONICAL_DESCRIPTION);
   assert.strictEqual(marketplace.plugins.length, 1);
-  assert.strictEqual(marketplace.plugins[0].name, "knowledge-capture");
-  assert.strictEqual(marketplace.plugins[0].displayName, "Knowledge Capture");
-  assert.strictEqual(marketplace.plugins[0].source, "./");
+  assert.strictEqual(marketplace.plugins[0].name, CANONICAL_PLUGIN_NAME);
   assert.strictEqual(
-    marketplace.plugins[0].description,
-    "Capture agent decisions, evidence, changes, and next steps as local Markdown.",
-  );
-  assert.strictEqual(marketplace.plugins[0].version, "0.7.0");
-  assert.deepStrictEqual(marketplace.plugins[0].author, {
-    name: "kRicha",
-    url: "https://github.com/kricha",
-  });
-  assert.strictEqual(
-    marketplace.plugins[0].homepage,
-    "https://github.com/kricha/knowledge-capture",
+    marketplace.plugins[0].displayName,
+    CANONICAL_DISPLAY_NAME,
   );
   assert.strictEqual(
-    marketplace.plugins[0].repository,
-    "https://github.com/kricha/knowledge-capture",
+    marketplace.plugins[0].source,
+    CANONICAL_MARKETPLACE_SOURCE,
   );
-  assert.strictEqual(marketplace.plugins[0].license, "MIT");
-  assert.ok(marketplace.plugins[0].keywords.includes("agent-skill"));
+  assert.strictEqual(marketplace.plugins[0].description, CANONICAL_DESCRIPTION);
+  assert.strictEqual(marketplace.plugins[0].version, CANONICAL_VERSION);
+  assert.deepStrictEqual(marketplace.plugins[0].author, CANONICAL_AUTHOR);
+  assert.strictEqual(marketplace.plugins[0].homepage, CANONICAL_HOMEPAGE);
+  assert.strictEqual(marketplace.plugins[0].repository, CANONICAL_REPOSITORY);
+  assert.strictEqual(marketplace.plugins[0].license, CANONICAL_LICENSE);
+  assert.deepStrictEqual(marketplace.plugins[0].keywords, CANONICAL_KEYWORDS);
   assert.strictEqual(marketplace.plugins[0].category, "productivity");
   assert.ok(!fs.existsSync(path.join(PROJECT_ROOT, "plugins", "knowledge-capture")));
 });
@@ -312,44 +308,22 @@ test("README is human-facing and makes installation attractive", () => {
   assert.ok(readme.includes("decisions and discoveries"));
   assert.ok(readme.includes("open questions and next steps"));
   assert.ok(readme.includes("This project is deliberately small."));
-  assert.ok(readme.includes("### Codex Plugin"));
-  assert.ok(readme.includes("codex plugin marketplace add"));
+  assert.ok(readme.includes("## Install"));
+  assert.ok(readme.includes("Fastest path:"));
   assert.ok(
-    readme.includes("codex plugin add knowledge-capture@knowledge-capture"),
+    readme.includes("npx skills add kricha/knowledge-capture -s knowledge-capture"),
   );
-  assert.ok(
-    readme.includes("Start a new Codex thread after installing so the skill is loaded"),
-  );
-  assert.ok(readme.includes("### Claude Code Plugin"));
-  assert.ok(
-    readme.includes("/plugin marketplace add kricha/knowledge-capture"),
-  );
-  assert.ok(
-    readme.includes("/plugin install knowledge-capture@knowledge-capture"),
-  );
-  assert.ok(readme.includes("/reload-plugins"));
-  assert.ok(readme.includes("### Direct Agent Skill"));
-  assert.ok(readme.includes("For OpenCode, Hermes, and other agents"));
   assert.ok(
     readme.includes(
-      "https://github.com/kricha/knowledge-capture/tree/main/skills/knowledge-capture",
+      "For Codex plugin, Claude Code, OpenCode, direct skill installs, and checkout-based installs into another repo, see [INSTALLATION.md](INSTALLATION.md).",
     ),
   );
-  assert.ok(readme.includes("Install the knowledge-capture Agent Skill from"));
-  assert.ok(readme.includes("$skill-installer install"));
-  assert.ok(
-    readme.includes(
-      "After any coding task with changed files, run $knowledge-capture before the final response.",
-    ),
-  );
-  assert.ok(readme.includes(".agents/skills/knowledge-capture/SKILL.md"));
-  assert.ok(readme.includes("~/.agents/skills/knowledge-capture/SKILL.md"));
-  assert.ok(readme.includes(".opencode/skills/knowledge-capture/SKILL.md"));
-  assert.ok(
-    readme.includes("~/.config/opencode/skills/knowledge-capture/SKILL.md"),
-  );
-  assert.ok(readme.includes(".claude/skills/knowledge-capture/SKILL.md"));
-  assert.ok(readme.includes("~/.claude/skills/knowledge-capture/SKILL.md"));
+  assert.ok(!readme.includes("git clone https://github.com/kricha/knowledge-capture.git"));
+  assert.ok(!readme.includes("codex plugin marketplace add"));
+  assert.ok(!readme.includes("codex plugin add knowledge-capture@knowledge-capture"));
+  assert.ok(!readme.includes("### Claude Code Plugin"));
+  assert.ok(!readme.includes("### Direct Agent Skill"));
+  assert.ok(!readme.includes("Expected install paths"));
   assert.ok(readme.includes("Recommended consuming-repo `.gitignore` entries"));
   assert.ok(readme.includes(".capture/raw/"));
   assert.ok(readme.includes(".capture/pointer.json"));
@@ -417,6 +391,129 @@ test("README is human-facing and makes installation attractive", () => {
   assert.ok(!/\bwget\s+/.test(readme));
   assert.ok(!/\bcp\s+-/.test(readme));
   assert.ok(!/\bmv\s+/.test(readme));
+});
+
+test("installation guide documents all supported install paths", () => {
+  const installation = read(INSTALLATION_MD);
+  assert.ok(installation.startsWith("# Installation"));
+  assert.ok(installation.includes("## Codex Plugin From A Clone"));
+  assert.ok(
+    installation.includes("git clone https://github.com/kricha/knowledge-capture.git"),
+  );
+  assert.ok(installation.includes("codex plugin marketplace add \"$PWD\""));
+  assert.ok(
+    installation.includes("codex plugin add knowledge-capture@knowledge-capture"),
+  );
+  assert.ok(installation.includes("## Claude Code Plugin"));
+  assert.ok(
+    installation.includes("/plugin marketplace add kricha/knowledge-capture"),
+  );
+  assert.ok(
+    installation.includes("/plugin install knowledge-capture@knowledge-capture"),
+  );
+  assert.ok(
+    installation.includes("/plugin marketplace add /absolute/path/to/knowledge-capture"),
+  );
+  assert.ok(installation.includes("/reload-plugins"));
+  assert.ok(installation.includes("## Direct Agent Skill"));
+  assert.ok(installation.includes("For OpenCode, Hermes, and other agents"));
+  assert.ok(
+    installation.includes(
+      "https://github.com/kricha/knowledge-capture/tree/main/skills/knowledge-capture",
+    ),
+  );
+  assert.ok(installation.includes("Install the knowledge-capture Agent Skill from"));
+  assert.ok(installation.includes("$skill-installer install"));
+  assert.ok(
+    installation.includes(
+      "After any coding task with changed files, run $knowledge-capture before the final response.",
+    ),
+  );
+  assert.ok(installation.includes(".agents/skills/knowledge-capture/SKILL.md"));
+  assert.ok(installation.includes("~/.agents/skills/knowledge-capture/SKILL.md"));
+  assert.ok(installation.includes(".opencode/skills/knowledge-capture/SKILL.md"));
+  assert.ok(
+    installation.includes("~/.config/opencode/skills/knowledge-capture/SKILL.md"),
+  );
+  assert.ok(installation.includes(".claude/skills/knowledge-capture/SKILL.md"));
+  assert.ok(installation.includes("~/.claude/skills/knowledge-capture/SKILL.md"));
+  assert.ok(installation.includes("## Skills CLI And Manual Links"));
+  assert.ok(
+    installation.includes(
+      "npx skills add kricha/knowledge-capture -s knowledge-capture",
+    ),
+  );
+  assert.ok(
+    installation.includes(
+      "npx skills add kricha/knowledge-capture -s knowledge-capture --global",
+    ),
+  );
+  assert.ok(
+    installation.includes(
+      "npx skills add kricha/knowledge-capture -s knowledge-capture -a claude-code",
+    ),
+  );
+  assert.ok(
+    installation.includes(
+      "Manual clone/link installs must point at the skill folder, not the repository root",
+    ),
+  );
+  assert.ok(
+    installation.includes(
+      'ln -s "$(pwd)/skills/knowledge-capture" ~/.cursor/skills/knowledge-capture',
+    ),
+  );
+  assert.ok(
+    installation.includes(
+      'ln -s "$(pwd)" ~/.claude/plugins/knowledge-capture',
+    ),
+  );
+  assert.ok(
+    installation.includes(
+      "Gemini-style extension installs require a Gemini extension manifest.",
+    ),
+  );
+  assert.ok(installation.includes("## Install From A Checkout"));
+  assert.ok(
+    installation.includes(
+      "node scripts/install.js --scope repo --target /absolute/path/to/consuming-repo",
+    ),
+  );
+  assert.ok(installation.includes("node scripts/install.js --scope user"));
+  assert.ok(installation.includes("--dry-run"));
+  assert.ok(installation.includes("--force"));
+  assert.ok(installation.includes("## Consuming Repo Gitignore"));
+  assert.ok(installation.includes(".capture/raw/"));
+  assert.ok(installation.includes(".capture/pointer.json"));
+  assert.ok(installation.includes(".capture/pointer.json.lock"));
+  assert.ok(installation.includes(".capture/config.yaml"));
+  assert.ok(
+    installation.includes(
+      "Only commit `.capture/config.yaml` when it intentionally contains team-safe shared settings.",
+    ),
+  );
+  assert.ok(installation.includes("## Skill Configuration"));
+  assert.ok(
+    installation.includes(
+      "By default, captures are written under the target repo's `.capture/raw/` directory.",
+    ),
+  );
+  assert.ok(installation.includes("output_root: ~/vault/agent-inbox"));
+  assert.ok(installation.includes("agent: Codex"));
+  assert.ok(installation.includes("changed_by: Jane Developer"));
+  assert.ok(installation.includes("## Auto Invoke From A Global Install"));
+  assert.ok(
+    installation.includes(
+      "A global install makes `$knowledge-capture` available to the agent, but it does not automatically run for every repository.",
+    ),
+  );
+  assert.ok(installation.includes("AGENTS.md"));
+  assert.ok(installation.includes("CLAUDE.md"));
+  assert.ok(
+    installation.includes(
+      "Use repo-local instructions when different projects need different capture behavior.",
+    ),
+  );
 });
 
 test("root changelog records skill progress outside installed package", () => {
@@ -970,7 +1067,8 @@ test("docs do not present Codex session id placeholders as shell variables", () 
 
 test("OpenAI metadata points to skill", () => {
   const metadata = read(path.join(SKILL_ROOT, "agents", "openai.yaml"));
-  assert.ok(metadata.includes('display_name: "Knowledge Capture"'));
+  assert.ok(metadata.includes(`display_name: "${CANONICAL_DISPLAY_NAME}"`));
+  assert.ok(metadata.includes(`short_description: "${CANONICAL_DESCRIPTION}"`));
   assert.ok(metadata.includes("$knowledge-capture"));
 });
 
@@ -1101,6 +1199,58 @@ test("optional Node helper creates valid capture", () => {
   );
 });
 
+test("optional Node helper rejects unknown CLI options", () => {
+  const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-"));
+  const repo = path.join(tempdir, "my-repo");
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      CAPTURE_JS,
+      "--type",
+      "session",
+      "--title",
+      "Typoed Summary",
+      "--summmary",
+      "Misspelled summary option.",
+    ],
+    { cwd: repo, encoding: "utf8" },
+  );
+
+  assert.notStrictEqual(result.status, 0);
+  const payload = JSON.parse(result.stdout);
+  assert.strictEqual(payload.ok, false);
+  assert.strictEqual(payload.error, "unknown option: --summmary");
+  assert.ok(!fs.existsSync(path.join(repo, ".capture")));
+});
+
+test("optional Node helper accepts equals-form value options", () => {
+  const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-"));
+  const repo = path.join(tempdir, "my-repo");
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      CAPTURE_JS,
+      "--type=session",
+      "--title=Equals Form",
+      "--summary=Only one line.",
+      "--allow-sparse",
+      "--dry-run",
+    ],
+    { cwd: repo, encoding: "utf8" },
+  );
+
+  assert.strictEqual(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.strictEqual(payload.ok, true);
+  assert.strictEqual(payload.type, "session");
+  assert.strictEqual(payload.mode, "created");
+  assert.ok(!fs.existsSync(path.join(repo, ".capture")));
+});
+
 test("optional Node helper falls back to whoami for changed_by", () => {
   const tempdir = fs.mkdtempSync(
     path.join(os.tmpdir(), "knowledge-capture-whoami-"),
@@ -1194,6 +1344,9 @@ test("optional Node helper dry-run does not write", () => {
   const repo = path.join(tempdir, "my-repo");
   fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
   const stdin = [
+    "## User request",
+    "Preview a handoff capture without writing files.",
+    "",
     "## Changes and evidence",
     "Dry-run only; no files should be written.",
   ].join("\n");
@@ -1232,6 +1385,9 @@ test("optional Node helper updates active capture in place", () => {
       cwd: repo,
       encoding: "utf8",
       input: [
+        "## User request",
+        "Record the initial retry decision.",
+        "",
         "## Decisions and discoveries",
         "Early decision: send provider timeouts to manual review.",
         "",
@@ -1263,6 +1419,9 @@ test("optional Node helper updates active capture in place", () => {
       cwd: repo,
       encoding: "utf8",
       input: [
+        "## User request",
+        "Update the retry decision after implementation.",
+        "",
         "## Outcome",
         "Implemented automatic retry for provider timeouts.",
         "",
@@ -1357,6 +1516,9 @@ test("optional Node helper updates active pointer capture for matching session",
       cwd: repo,
       encoding: "utf8",
       input: [
+        "## User request",
+        "Continue the pointer-backed capture.",
+        "",
         "## Outcome",
         "Updated through the active pointer.",
         "",
@@ -1440,6 +1602,9 @@ test("optional Node helper rejects active pointer update for different session",
       cwd: repo,
       encoding: "utf8",
       input: [
+        "## User request",
+        "Attempt to update a capture from another session.",
+        "",
         "## Changes and evidence",
         "This should not rewrite another session's capture.",
       ].join("\n"),
@@ -1504,6 +1669,9 @@ test("optional Node helper rejects active pointer update without session proof",
       cwd: repo,
       encoding: "utf8",
       input: [
+        "## User request",
+        "Attempt to update a capture without session proof.",
+        "",
         "## Changes and evidence",
         "This should not rewrite an unverifiable active pointer.",
       ].join("\n"),
@@ -1544,8 +1712,140 @@ test("optional Node helper blocks sparse summary-only capture", () => {
   const payload = JSON.parse(result.stdout);
   assert.strictEqual(payload.ok, false);
   assert.match(payload.error, /too sparse/);
-  assert.ok(payload.warnings.some((warning) => warning.includes("too sparse")));
+  assert.match(payload.error, /missing populated User request/);
+  assert.match(payload.error, /at least one populated substance section/);
+  assert.match(payload.error, /Changes and evidence/);
+  assert.ok(
+    payload.warnings.some((warning) =>
+      warning.includes("missing populated User request"),
+    ),
+  );
   assert.ok(!fs.existsSync(path.join(repo, ".capture")));
+});
+
+test("optional Node helper blocks capture without user request", () => {
+  const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-"));
+  const repo = path.join(tempdir, "my-repo");
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+
+  const result = spawnSync(
+    process.execPath,
+    [CAPTURE_JS, "--type", "session", "--title", "Missing Request", "--stdin"],
+    {
+      cwd: repo,
+      encoding: "utf8",
+      input: [
+        "## Changes and evidence",
+        "A substance section alone should not pass the default sparse gate.",
+      ].join("\n"),
+    },
+  );
+
+  assert.notStrictEqual(result.status, 0);
+  const payload = JSON.parse(result.stdout);
+  assert.strictEqual(payload.ok, false);
+  assert.match(payload.error, /missing populated User request/);
+  assert.doesNotMatch(payload.error, /at least one populated substance section/);
+  assert.ok(!fs.existsSync(path.join(repo, ".capture")));
+});
+
+test("optional Node helper blocks user-request-only capture", () => {
+  const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-"));
+  const repo = path.join(tempdir, "my-repo");
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      CAPTURE_JS,
+      "--type",
+      "session",
+      "--title",
+      "User Request Only",
+      "--stdin",
+    ],
+    {
+      cwd: repo,
+      encoding: "utf8",
+      input: [
+        "## User request",
+        "Capture the request without any supporting substance.",
+      ].join("\n"),
+    },
+  );
+
+  assert.notStrictEqual(result.status, 0);
+  const payload = JSON.parse(result.stdout);
+  assert.strictEqual(payload.ok, false);
+  assert.doesNotMatch(payload.error, /missing populated User request/);
+  assert.match(payload.error, /at least one populated substance section/);
+  assert.match(payload.error, /Changes and evidence/);
+  assert.match(payload.error, /Decisions and discoveries/);
+  assert.match(payload.error, /Open questions and next steps/);
+  assert.ok(!fs.existsSync(path.join(repo, ".capture")));
+});
+
+test("optional Node helper accepts user request plus one substance section", () => {
+  const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-"));
+  const repo = path.join(tempdir, "my-repo");
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+
+  const result = spawnSync(
+    process.execPath,
+    [CAPTURE_JS, "--type", "decision", "--title", "One Substance", "--stdin"],
+    {
+      cwd: repo,
+      encoding: "utf8",
+      input: [
+        "## User request",
+        "Record the decision from this turn.",
+        "",
+        "## Decisions and discoveries",
+        "The sparse gate accepts one populated substance section.",
+      ].join("\n"),
+    },
+  );
+
+  assert.strictEqual(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.strictEqual(payload.ok, true);
+  assert.strictEqual(payload.type, "decision");
+  assert.ok(fs.existsSync(payload.path));
+  const text = read(payload.path);
+  assert.ok(text.includes("Record the decision from this turn."));
+  assert.ok(
+    text.includes("The sparse gate accepts one populated substance section."),
+  );
+});
+
+test("optional Node helper allows sparse capture with allow-sparse", () => {
+  const tempdir = fs.mkdtempSync(path.join(os.tmpdir(), "knowledge-capture-"));
+  const repo = path.join(tempdir, "my-repo");
+  fs.mkdirSync(path.join(repo, ".git"), { recursive: true });
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      CAPTURE_JS,
+      "--type",
+      "handoff",
+      "--title",
+      "Allowed Sparse Capture",
+      "--summary",
+      "Only a summary.",
+      "--allow-sparse",
+    ],
+    { cwd: repo, encoding: "utf8" },
+  );
+
+  assert.strictEqual(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.strictEqual(payload.ok, true);
+  assert.strictEqual(payload.type, "handoff");
+  assert.ok(
+    payload.warnings.some((warning) => warning.includes("too sparse")),
+  );
+  assert.ok(fs.existsSync(payload.path));
 });
 
 test("optional Node helper does not count removed context section as meaningful", () => {
@@ -1570,6 +1870,8 @@ test("optional Node helper does not count removed context section as meaningful"
   const payload = JSON.parse(result.stdout);
   assert.strictEqual(payload.ok, false);
   assert.match(payload.error, /too sparse/);
+  assert.match(payload.error, /missing populated User request/);
+  assert.match(payload.error, /at least one populated substance section/);
   assert.ok(!fs.existsSync(path.join(repo, ".capture")));
 });
 
@@ -1810,6 +2112,9 @@ test("optional Node helper writes to configured external output root", () => {
       encoding: "utf8",
       env: { ...process.env, HOME: home },
       input: [
+        "## User request",
+        "Update the external-root capture.",
+        "",
         "## Outcome",
         "Updated the external-root capture through its active pointer.",
         "",

@@ -3,14 +3,14 @@
   "owner": {
     "name": "kRicha"
   },
-  "description": "Local-first agent knowledge capture tools.",
+  "description": "Capture agent decisions, evidence, changes, and next steps as local Markdown.",
   "plugins": [
     {
       "name": "knowledge-capture",
       "displayName": "Knowledge Capture",
       "source": "./",
       "description": "Capture agent decisions, evidence, changes, and next steps as local Markdown.",
-      "version": "0.7.0",
+      "version": "0.7.1",
       "author": {
         "name": "kRicha",
         "url": "https://github.com/kricha"
