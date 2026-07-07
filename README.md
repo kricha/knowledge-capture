@@ -36,6 +36,8 @@ Fastest path:
 npx skills add kricha/knowledge-capture -s knowledge-capture
 ```
 
+This uses the community Skills CLI for a one-command install.
+
 For Codex plugin, Claude Code, OpenCode, direct skill installs, and checkout-based installs into another repo, see [INSTALLATION.md](INSTALLATION.md).
 
 ## Keep Captures Local

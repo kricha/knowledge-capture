@@ -9,7 +9,7 @@ description: Use after coding, debugging, investigations, architecture discussio
 
 Before the final response for any repo task, save exactly one current-session `session` capture when files changed, tests ran, or a decision, discovery, or follow-up emerged. Do this after verification and before asking for backlog cleanup or approval. Before context compression, compaction, or handoff, capture first if meaningful work or decisions are not already captured.
 
-Capture current-task detail only. In v0.7, do not read, update, deduplicate, merge, sync, commit, publish, or promote unrelated captures.
+Capture current-task detail only. Do not read, update, deduplicate, merge, sync, commit, publish, or promote unrelated captures.
 
 Default output root is `.capture/raw/`. A repo may set `capture.output_root` in `.capture/config.yaml`, or pass `--output-root`, to use another local repo-relative, absolute, or `~/...` path. This relocates raw captures only; helper state stays in `.capture/`. It is not sync, publishing, or durable memory promotion. Captures include `agent` and `changed_by`; configured `changed_by` is used as provided, git auto-detect writes `Name (email) [git]`, and whoami writes `user [whoami]`.
 

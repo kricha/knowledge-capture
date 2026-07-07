@@ -271,6 +271,7 @@ test("skill package has no Python or package-install dependency", () => {
 });
 
 test("installed skill docs stay compact", () => {
+  assert.ok(!read(SKILL_MD).includes("In v0.7"));
   assert.ok(lineCount(SKILL_MD) <= 70);
   assert.ok(lineCount(path.join(REFERENCES, "raw-capture-schema.md")) <= 130);
   assert.ok(
@@ -312,6 +313,9 @@ test("README is human-facing and makes installation attractive", () => {
   assert.ok(readme.includes("Fastest path:"));
   assert.ok(
     readme.includes("npx skills add kricha/knowledge-capture -s knowledge-capture"),
+  );
+  assert.ok(
+    readme.includes("This uses the community Skills CLI for a one-command install."),
   );
   assert.ok(
     readme.includes(
@@ -647,7 +651,83 @@ test("installer uses built-in modules and installs repo-local skill", () => {
   );
 
   assert.notStrictEqual(second.status, 0);
-  assert.match(JSON.parse(second.stdout).error, /already exists/);
+  const secondPayload = JSON.parse(second.stdout);
+  assert.strictEqual(secondPayload.ok, false);
+  assert.match(secondPayload.error, /already exists/);
+});
+
+test("installer rejects unknown options as JSON", () => {
+  const result = spawnSync(
+    process.execPath,
+    [INSTALL_JS, "--summmary"],
+    { cwd: PROJECT_ROOT, encoding: "utf8" },
+  );
+
+  assert.notStrictEqual(result.status, 0);
+  assert.deepStrictEqual(JSON.parse(result.stdout), {
+    ok: false,
+    error: "unknown option: --summmary",
+  });
+});
+
+test("installer dry-run does not create destination", () => {
+  const tempdir = fs.mkdtempSync(
+    path.join(os.tmpdir(), "knowledge-capture-install-"),
+  );
+  const repo = path.join(tempdir, "repo");
+  const destination = path.join(repo, ".agents", "skills", "knowledge-capture");
+  fs.mkdirSync(repo, { recursive: true });
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      INSTALL_JS,
+      "--scope",
+      "repo",
+      "--target",
+      repo,
+      "--dry-run",
+    ],
+    { cwd: PROJECT_ROOT, encoding: "utf8" },
+  );
+
+  assert.strictEqual(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.strictEqual(payload.ok, true);
+  assert.strictEqual(payload.action, "dry-run");
+  assert.strictEqual(payload.path, destination);
+  assert.ok(!fs.existsSync(destination));
+});
+
+test("installer force replaces existing install", () => {
+  const tempdir = fs.mkdtempSync(
+    path.join(os.tmpdir(), "knowledge-capture-install-"),
+  );
+  const repo = path.join(tempdir, "repo");
+  const destination = path.join(repo, ".agents", "skills", "knowledge-capture");
+  fs.mkdirSync(destination, { recursive: true });
+  fs.writeFileSync(path.join(destination, "stale.txt"), "stale", "utf8");
+
+  const result = spawnSync(
+    process.execPath,
+    [
+      INSTALL_JS,
+      "--scope",
+      "repo",
+      "--target",
+      repo,
+      "--force",
+    ],
+    { cwd: PROJECT_ROOT, encoding: "utf8" },
+  );
+
+  assert.strictEqual(result.status, 0, result.stderr);
+  const payload = JSON.parse(result.stdout);
+  assert.strictEqual(payload.ok, true);
+  assert.strictEqual(payload.action, "installed");
+  assert.strictEqual(fs.realpathSync(payload.path), fs.realpathSync(destination));
+  assert.ok(fs.existsSync(path.join(destination, "SKILL.md")));
+  assert.ok(!fs.existsSync(path.join(destination, "stale.txt")));
 });
 
 test("global helper path resolves captures against target repo", () => {
@@ -877,7 +957,7 @@ test("scope excludes processing and sync", () => {
   );
   assert.ok(
     skill.includes(
-      "do not read, update, deduplicate, merge, sync, commit, publish, or promote unrelated captures",
+      "Do not read, update, deduplicate, merge, sync, commit, publish, or promote unrelated captures",
     ),
   );
   assert.ok(skill.includes("Default output root is `.capture/raw/`"));
