@@ -1,5 +1,15 @@
 # Changelog
 
+## v0.7 - 2026-07-07
+
+- Breaking: renamed repo-local capture state from `.ai/` to `.capture/`, including default captures at `.capture/raw/`, config at `.capture/config.yaml`, and the active pointer at `.capture/pointer.json`.
+- Configured output roots receive capture files only; helper pointer and lock state stay in repo-local `.capture/`.
+- Bumped raw capture schema version to `0.7`.
+- Rewrote README as a human-facing installation and positioning page while keeping skill docs strict and agent-optimized.
+- Added root Codex and Claude Code plugin manifests plus marketplace entries for plugin-based installation without duplicating skill files.
+- Documented OpenCode and generic-agent direct skill install paths.
+- Made helper invocation docs install-location-neutral so global and plugin installs resolve captures against the target repo.
+
 ## v0.6 - 2026-07-06
 
 - Shortened skill frontmatter to a discovery-focused description.

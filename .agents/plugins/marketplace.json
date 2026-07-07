@@ -1,0 +1,20 @@
+{
+  "name": "knowledge-capture",
+  "interface": {
+    "displayName": "Knowledge Capture"
+  },
+  "plugins": [
+    {
+      "name": "knowledge-capture",
+      "source": {
+        "source": "local",
+        "path": "./"
+      },
+      "policy": {
+        "installation": "AVAILABLE",
+        "authentication": "ON_INSTALL"
+      },
+      "category": "Productivity"
+    }
+  ]
+}

@@ -4,7 +4,7 @@ Example of an updated workflow capture. It is not a transcript; it keeps current
 
 ```markdown
 ---
-schema_version: "0.6"
+schema_version: "0.7"
 type: session
 repo_id: "billing-service"
 repo_name: "Billing Service"
@@ -45,9 +45,9 @@ The active pointer for that workflow would look like:
 
 ```json
 {
-  "schema_version": "0.6",
+  "schema_version": "0.7",
   "type": "session",
-  "active_capture": ".ai/raw/sessions/2026-07-04T18-22-10Z--session--invoice-retry-behavior.md",
+  "active_capture": ".capture/raw/sessions/2026-07-04T18-22-10Z--session--invoice-retry-behavior.md",
   "workflow_id": "2026-07-04T18-22-10Z--session--invoice-retry-behavior",
   "title": "invoice retry behavior",
   "created_at": "2026-07-04T18:22:10Z",
@@ -58,6 +58,6 @@ The active pointer for that workflow would look like:
 }
 ```
 
-With a configured output root outside the repo, the active pointer lives there and `active_capture` should be an absolute local path.
+With a configured output root outside the repo, `.capture/pointer.json` still lives in the repo and `active_capture` should be an absolute local path. The helper lock is `.capture/pointer.json.lock`.
 
 `agent_session_id` is optional best-effort metadata; omit it when the runtime does not clearly expose a stable current session, conversation, thread, or run ID. In Codex, pass a verified `/status` ID explicitly; do not assume a shell variable. A later agent session should create a new capture and cite this one if needed.

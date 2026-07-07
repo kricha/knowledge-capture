@@ -1,0 +1,31 @@
+{
+  "name": "knowledge-capture",
+  "owner": {
+    "name": "kRicha"
+  },
+  "description": "Local-first agent knowledge capture tools.",
+  "plugins": [
+    {
+      "name": "knowledge-capture",
+      "displayName": "Knowledge Capture",
+      "source": "./",
+      "description": "Capture agent decisions, evidence, changes, and next steps as local Markdown.",
+      "version": "0.7.0",
+      "author": {
+        "name": "kRicha",
+        "url": "https://github.com/kricha"
+      },
+      "homepage": "https://github.com/kricha/knowledge-capture",
+      "repository": "https://github.com/kricha/knowledge-capture",
+      "license": "MIT",
+      "keywords": [
+        "agent-skill",
+        "knowledge-capture",
+        "handoff",
+        "local-first",
+        "markdown"
+      ],
+      "category": "productivity"
+    }
+  ]
+}

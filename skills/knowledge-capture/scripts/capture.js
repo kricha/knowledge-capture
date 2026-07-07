@@ -6,8 +6,10 @@ const fs = require("fs");
 const os = require("os");
 const path = require("path");
 
-const SCHEMA_VERSION = "0.6";
-const ACTIVE_POINTER_FILE = "active-session.json";
+const SCHEMA_VERSION = "0.7";
+const STATE_ROOT = ".capture";
+const DEFAULT_OUTPUT_ROOT = ".capture/raw";
+const ACTIVE_POINTER_FILE = "pointer.json";
 const ACTIVE_POINTER_LOCK_FILE = `${ACTIVE_POINTER_FILE}.lock`;
 const ACTIVE_POINTER_LOCK_TIMEOUT_MS = 5000;
 const ACTIVE_POINTER_LOCK_STALE_MS = 120000;
@@ -55,9 +57,9 @@ function usage() {
     "  --summary TEXT      Summary for the main capture section",
     "  --tags a,b          Comma-separated tags",
     "  --repo-root PATH    Repo root or path inside the repo",
-    "  --output-root PATH  Local output root, default .ai/raw; supports absolute and ~/ paths",
+    "  --output-root PATH  Local output root, default .capture/raw; supports absolute and ~/ paths",
     "  --update PATH      Replace the active capture at PATH",
-    "  --update-active    Replace capture from the output root active-session.json when agent-session-id matches",
+    "  --update-active    Replace capture from .capture/pointer.json when agent-session-id matches",
     "  --agent TEXT       Agent name for capture metadata",
     "  --changed-by TEXT  Person/account changing the repo; defaults to git user or whoami",
     "  --agent-session-id TEXT  Optional current agent/session id",
@@ -440,12 +442,12 @@ function resolveUpdatePath(repoRoot, outputRoot, updatePath) {
   return resolved;
 }
 
-function activePointerPath(outputRoot) {
-  return path.join(outputRoot, ACTIVE_POINTER_FILE);
+function activePointerPath(stateRoot) {
+  return path.join(stateRoot, ACTIVE_POINTER_FILE);
 }
 
-function activePointerLockPath(outputRoot) {
-  return path.join(outputRoot, ACTIVE_POINTER_LOCK_FILE);
+function activePointerLockPath(lockRoot) {
+  return path.join(lockRoot, ACTIVE_POINTER_LOCK_FILE);
 }
 
 function sleepSync(milliseconds) {
@@ -471,10 +473,10 @@ function removeStaleActivePointerLock(lockPath) {
   return true;
 }
 
-function acquireActivePointerLock(outputRoot) {
-  fs.mkdirSync(outputRoot, { recursive: true });
+function acquireActivePointerLock(lockRoot) {
+  fs.mkdirSync(lockRoot, { recursive: true });
 
-  const lockPath = activePointerLockPath(outputRoot);
+  const lockPath = activePointerLockPath(lockRoot);
   const startedAt = Date.now();
   const lockId = `${process.pid}-${startedAt}-${activePointerLockCounter += 1}`;
   const payload = {
@@ -550,8 +552,8 @@ function readJsonFile(filePath) {
   return JSON.parse(fs.readFileSync(filePath, "utf8"));
 }
 
-function readActivePointer(outputRoot) {
-  const pointerPath = activePointerPath(outputRoot);
+function readActivePointer(stateRoot) {
+  const pointerPath = activePointerPath(stateRoot);
   if (!fs.existsSync(pointerPath)) {
     throw new Error("active pointer does not exist; create a new capture instead of guessing");
   }
@@ -567,8 +569,8 @@ function readActivePointer(outputRoot) {
   return { pointer, pointerPath };
 }
 
-function resolveActivePointerPath(repoRoot, outputRoot) {
-  const { pointer, pointerPath } = readActivePointer(outputRoot);
+function resolveActivePointerPath(repoRoot, outputRoot, stateRoot) {
+  const { pointer, pointerPath } = readActivePointer(stateRoot);
   const resolved = resolveStoredCapturePath(repoRoot, pointer.active_capture);
   if (!isPathInside(outputRoot, resolved)) {
     throw new Error("active pointer points outside the output root");
@@ -596,7 +598,7 @@ function workflowIdFromPath(outputPath) {
 }
 
 function writeActivePointer(values) {
-  const pointerPath = activePointerPath(values.outputRoot);
+  const pointerPath = activePointerPath(values.stateRoot);
   const pointer = {
     schema_version: SCHEMA_VERSION,
     type: values.captureType,
@@ -746,12 +748,13 @@ function main(argv) {
     }
 
     const repoRoot = findRepoRoot(args.repoRoot ? expandHomePath(args.repoRoot) : process.cwd());
-    const config = readSimpleConfig(path.join(repoRoot, ".ai", "config.yaml"));
+    const config = readSimpleConfig(path.join(repoRoot, ".capture", "config.yaml"));
     const repoId = String(config.repo_id || path.basename(repoRoot));
     const repoName = String(config.repo_name || titleizeRepoName(repoId));
     const identity = resolveCaptureIdentity(args, config, repoRoot);
-    const outputRootValue = args.outputRoot || config["capture.output_root"] || ".ai/raw";
+    const outputRootValue = args.outputRoot || config["capture.output_root"] || DEFAULT_OUTPUT_ROOT;
     const outputRoot = resolveConfiguredPath(repoRoot, outputRootValue);
+    const stateRoot = resolveConfiguredPath(repoRoot, STATE_ROOT);
 
     if (config["capture.default_status"] && config["capture.default_status"] !== "raw") {
       warnings.push(`Configured capture.default_status ignored; v${SCHEMA_VERSION} writes raw captures only.`);
@@ -822,11 +825,11 @@ function main(argv) {
     }
 
     if (captureType === "session" && !args.dryRun) {
-      activePointerLock = acquireActivePointerLock(outputRoot);
+      activePointerLock = acquireActivePointerLock(stateRoot);
     }
 
     if (args.updateActive) {
-      const active = resolveActivePointerPath(repoRoot, outputRoot);
+      const active = resolveActivePointerPath(repoRoot, outputRoot, stateRoot);
       assertActivePointerSessionMatches(active.pointer, args.agentSessionId || "");
       outputPath = active.outputPath;
       if (active.pointer.type && active.pointer.type !== captureType) {
@@ -847,7 +850,7 @@ function main(argv) {
       }
       createdAt = existing.created_at || iso;
       try {
-        const active = resolveActivePointerPath(repoRoot, outputRoot);
+        const active = resolveActivePointerPath(repoRoot, outputRoot, stateRoot);
         if (active.outputPath === outputPath) {
           workflowId = workflowId || active.pointer.workflow_id || workflowIdFromPath(outputPath);
         }
@@ -885,7 +888,7 @@ function main(argv) {
     if (captureType === "session") {
       activePointer = writeActivePointer({
         repoRoot,
-        outputRoot,
+        stateRoot,
         outputPath,
         captureType,
         workflowId,

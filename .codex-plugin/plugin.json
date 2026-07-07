@@ -1,0 +1,37 @@
+{
+  "name": "knowledge-capture",
+  "version": "0.7.0",
+  "description": "Capture agent decisions, evidence, changes, and next steps as local Markdown.",
+  "author": {
+    "name": "kRicha",
+    "url": "https://github.com/kricha"
+  },
+  "homepage": "https://github.com/kricha/knowledge-capture",
+  "repository": "https://github.com/kricha/knowledge-capture",
+  "license": "MIT",
+  "keywords": [
+    "agent-skill",
+    "knowledge-capture",
+    "handoff",
+    "local-first",
+    "markdown"
+  ],
+  "skills": "./skills/",
+  "interface": {
+    "displayName": "Knowledge Capture",
+    "shortDescription": "Save useful agent-session context as local Markdown.",
+    "longDescription": "Knowledge Capture helps coding agents preserve task context, decisions, evidence, changes, and next steps in local Markdown captures that can later feed a vault, wiki, or knowledge base.",
+    "developerName": "kRicha",
+    "category": "Productivity",
+    "capabilities": [
+      "Write"
+    ],
+    "websiteURL": "https://github.com/kricha/knowledge-capture",
+    "defaultPrompt": [
+      "Capture the current coding session.",
+      "Save decisions and next steps.",
+      "Create a handoff note for this work."
+    ],
+    "brandColor": "#2563EB"
+  }
+}

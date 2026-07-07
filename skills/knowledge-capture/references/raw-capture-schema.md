@@ -6,7 +6,7 @@ Use this when writing a capture manually or changing the shape. This is a raw lo
 
 ```markdown
 ---
-schema_version: "0.6"
+schema_version: "0.7"
 type: session
 repo_id: "my-repo"
 repo_name: "My Repo"
@@ -47,7 +47,7 @@ Keep user constraints, approval gates, task IDs, changed files with concise evid
 
 ## Fields
 
-- `schema_version`: `"0.6"`
+- `schema_version`: `"0.7"`
 - `type`: `session`, `discussion`, `investigation`, `decision`, or `handoff`
 - `repo_id`: stable repo identifier, usually directory slug
 - `repo_name`: human-readable repo name
@@ -71,7 +71,7 @@ If the same timestamp/type/slug exists, append `--2`, `--3`, and so on before `.
 
 ## Output Root
 
-Default output root is `.ai/raw/` under the repo. The helper also accepts `--output-root PATH` or `.ai/config.yaml`:
+Default output root is `.capture/raw/` under the repo. The helper also accepts `--output-root PATH` or `.capture/config.yaml`:
 
 ```yaml
 capture:
@@ -80,21 +80,21 @@ capture:
   changed_by: Jane Developer
 ```
 
-`capture.output_root` may be repo-relative, absolute, or home-relative with `~/`. It must be a local filesystem path; this feature only relocates raw capture files and the active pointer. It does not sync, publish, index, promote durable memory, or process captures from unrelated locations.
+`capture.output_root` may be repo-relative, absolute, or home-relative with `~/`. It must be a local filesystem path; this feature only relocates raw capture files. Helper state stays in repo-local `.capture/`. It does not sync, publish, index, promote durable memory, or process captures from unrelated locations.
 
-When the output root is inside the repo, put it in `.gitignore` by default. When it is outside the repo, review that location's privacy, backup, and sharing behavior before writing sensitive project notes there.
+When the output root is inside the repo, put it in `.gitignore` by default. Also gitignore local `.capture/config.yaml`, `.capture/pointer.json`, and `.capture/pointer.json.lock` unless the config intentionally contains shared team-safe settings. When output is outside the repo, review that location's privacy, backup, and sharing behavior before writing sensitive project notes there.
 
-Without Node or shell execution, read `.ai/config.yaml` when accessible. If `capture.output_root` is set, write directly under that root; otherwise write under `.ai/raw/`. Use the type folder (`sessions/`, `handoffs/`, `decisions/`, etc.). Maintain `active-session.json` in the same output root only when the active-session rules can be satisfied.
+Without Node or shell execution, read `.capture/config.yaml` when accessible. If `capture.output_root` is set, write directly under that root; otherwise write under `.capture/raw/`. Use the type folder (`sessions/`, `handoffs/`, `decisions/`, etc.). Maintain `.capture/pointer.json` only when the active-session rules can be satisfied.
 
 ## Active Pointer
 
-For active `session` captures, the helper maintains `active-session.json` in the output root. With the default root, that is `.ai/raw/active-session.json`:
+For active `session` captures, the helper maintains `.capture/pointer.json`:
 
 ```json
 {
-  "schema_version": "0.6",
+  "schema_version": "0.7",
   "type": "session",
-  "active_capture": ".ai/raw/sessions/2026-07-04T18-22-10Z--session--auth-refresh-token-fix.md",
+  "active_capture": ".capture/raw/sessions/2026-07-04T18-22-10Z--session--auth-refresh-token-fix.md",
   "workflow_id": "2026-07-04T18-22-10Z--session--auth-refresh-token-fix",
   "title": "auth refresh token fix",
   "created_at": "2026-07-04T18:22:10Z",
@@ -109,7 +109,7 @@ When `active_capture` points inside the repo, store it repo-relative as shown ab
 
 Do not clear this pointer after every final response. Replace it when a new workflow capture or new agent-session capture starts.
 
-Helper-managed `session` captures guard active-pointer access with `active-session.json.lock` in the output root. The helper creates the lock with exclusive file creation, removes stale locks, writes through a same-directory temp file, and atomically renames it into place. This prevents partial writes and local helper races. It is not a distributed lock and does not protect direct manual edits or tools that bypass the helper.
+Helper-managed `session` captures guard active-pointer access with `.capture/pointer.json.lock`. The helper creates the lock with exclusive file creation, removes stale locks, writes the active pointer through a same-directory temp file, and atomically renames it into place. This prevents partial writes and local helper races. It is not a distributed lock and does not protect direct manual edits or tools that bypass the helper.
 
 Treat `agent_session_id` as optional best-effort metadata and a guardrail, not the definition of a workflow. Use it only when the runtime clearly exposes a stable current session, conversation, thread, or run ID; otherwise omit it and never invent one. In Codex, `/status` may show a session ID even when the shell does not export `CURRENT_AGENT_SESSION_ID`, `CODEX_SESSION_ID`, or `SESSION_ID`; pass a verified ID explicitly or omit `--agent-session-id`. If the ID differs, is missing, or is unavailable, create a new capture and replace the pointer. Within the same agent session, continuation requires a reference to the active capture's decision, evidence, or outcome, not just the same module, repo, or file path. A later agent session may cite the old capture, but should start a new capture file. Never choose by latest filename guessing.
 
@@ -119,4 +119,4 @@ Do not include secrets, credentials, API keys, tokens, private key material, cus
 
 The optional Node helper only does basic pattern detection. It blocks obvious AWS, GitHub, OpenAI, Anthropic, Cloudflare, n8n, bearer-token, password, API-token, and HMAC/signing-secret shapes. Passing that check is not proof that a capture is safe.
 
-The helper reads `.ai/config.yaml` and existing capture frontmatter as a flat scalar subset only. Config may use top-level scalar keys and one-level scalar sections such as `capture.output_root` with any consistent positive indentation; lists, objects, block scalars, anchors, and deeper nesting are unsupported. If config uses unsupported YAML, the helper should fail instead of guessing.
+The helper reads `.capture/config.yaml` and existing capture frontmatter as a flat scalar subset only. Config may use top-level scalar keys and one-level scalar sections such as `capture.output_root` with any consistent positive indentation; lists, objects, block scalars, anchors, and deeper nesting are unsupported. If config uses unsupported YAML, the helper should fail instead of guessing.

@@ -4,4 +4,10 @@ __pycache__/
 .venv/
 tmp/
 *.tmp
+.capture/config.yaml
+.capture/pointer.json
+.capture/pointer.json.lock
+.capture/raw/
+.ai/active-session.json
+.ai/active-session.json.lock
 .ai/raw/
